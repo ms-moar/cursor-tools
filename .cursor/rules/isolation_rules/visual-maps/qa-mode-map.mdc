@@ -32,17 +32,21 @@ graph TD
     
     %% Results Processing
     ValidationResults -->|"Yes"| SuccessReport["📝 GENERATE SUCCESS REPORT<br>All validations passed"]
+
+    %% JIRA INTEGRATION START
+    SuccessReport --> UpdateJiraStatus["📚 Update Jira Status to 'В работе'"]
+    UpdateJiraStatus --> SuggestBuild["🚦 Suggest BUILD/IMPLEMENT Mode"]
+    %% JIRA INTEGRATION END
+
     ValidationResults -->|"No"| FailureReport["⚠️ GENERATE FAILURE REPORT<br>With specific fix instructions"]
     
     %% Success Path
-    SuccessReport --> UpdateMB["📚 Update Memory Bank<br>Record successful validation"]
-    UpdateMB --> ContinueProcess["🚦 CONTINUE: Phase processes<br>can proceed"]
+    UpdateJiraStatus --> ContinueProcess["🚦 CONTINUE: Phase processes<br>can proceed"]
     
     %% Failure Path
-    FailureReport --> IdentifyFixes["🔧 IDENTIFY REQUIRED FIXES"]
-    IdentifyFixes --> ApplyFixes["🛠️ APPLY FIXES"]
-    ApplyFixes --> Revalidate["🔄 Re-run validation"]
-    Revalidate --> ValidationResults
+    FailureReport --> FixIssues["🔧 Fix Technical Issues"]
+    FixIssues --> ReValidate["🔄 Re-validate"]
+    ReValidate --> ValidationResults
     
     %% Style nodes for clarity
     style Start fill:#4da6ff,stroke:#0066cc,color:white
@@ -55,7 +59,10 @@ graph TD
     style SuccessReport fill:#10b981,stroke:#059669,color:white
     style FailureReport fill:#f6ad55,stroke:#c27022,color:white
     style ContinueProcess fill:#10b981,stroke:#059669,color:white,stroke-width:2px
-    style IdentifyFixes fill:#f6ad55,stroke:#c27022,color:white
+    style FixIssues fill:#ff5555,stroke:#dd3333,color:white
+    %% JIRA Node Styles
+    style UpdateJiraStatus fill:#5e72e4,stroke:#324cdd,color:white
+    style SuggestBuild fill:#10b981,stroke:#059669,color:white
 ```
 
 ## 🧭 PHASE DETECTION PROCESS
@@ -493,3 +500,40 @@ graph TD
 ```
 
 This enhanced QA mode serves as a "quality guardian" throughout the development process, ensuring documentation is consistently maintained and all phase requirements are met before proceeding to the next phase. 
+
+## 🧪 QA VALIDATION STEPS
+
+### Step 5: Report Results and Prepare for Transition
+
+- **Configuration Reading**:
+    - **Action**: Read the `integration_config.md` file to get Jira configuration.
+    - **Data**: Extract `Project Key` and Jira status for VAN QA phase (e.g., `В работе`).
+
+- **Generate Report**: Create either a success or failure report based on the validation outcome.
+- **If Successful**: ✅
+    - **Update Jira Status**:
+        - **Action**: Read `tasks.md` to find the current task and its Jira ID.
+        - **Action**: Call `mcp_mcp-atlassian_jira_update_issue`.
+        - **Parameters**:
+            - `issue_key`: The Jira ID retrieved from `tasks.md`.
+            - `fields`: `'{"status": {"name": "$STATUS_NAME"}}'` where `$STATUS_NAME` is from the configuration (e.g., "В работе").
+            - *Note: May require `transition_issue` if direct update fails*.
+        - **Error Handling**: Retry once on MCP failure, then report and ask user.
+    - **Transition**: Signal successful validation and suggest switching to BUILD/IMPLEMENT mode.
+    ```
+    ✅ TECHNICAL VALIDATION COMPLETE
+    Jira Story status updated based on configuration.
+    All prerequisites verified successfully.
+    You may now proceed to BUILD mode.
+    Type 'BUILD' or 'IMPLEMENT' to begin implementation.
+    ```
+- **If Failed**: ❌
+    - **Transition**: Report the failure, indicating that BUILD mode is blocked, and prompt the user to fix the issues and re-run QA.
+    ```
+    ⚠️ QA VALIDATION FAILED
+    See report above for details.
+    Jira Story status remains unchanged.
+    BUILD MODE IS BLOCKED until these issues are resolved.
+    Type 'VAN QA' after fixing the issues to re-validate.
+
+    ```

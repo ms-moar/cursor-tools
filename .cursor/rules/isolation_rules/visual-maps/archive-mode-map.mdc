@@ -55,9 +55,24 @@ graph TD
     L34System --> L34Complete["Mark Task<br>Complete"]
     
     %% Completion
-    L1Complete & L2Complete & L34Complete --> CreateArchive["Create Archive<br>Document in<br>docs/archive/"]
-    CreateArchive --> UpdateActive["Update<br>activeContext.md"]
-    UpdateActive --> Reset["Reset for<br>Next Task"]
+    L1Complete & L2Complete & L34Complete --> CreateArchive[\"Create Archive<br>Document in<br>docs/archive/\"]
+
+    %% LOCAL DOCS & CONFLUENCE INTEGRATION START
+    CreateArchive --> VerifyDocsDir[\"Verify/Create<br>docs/archive/ directory\"]
+    VerifyDocsDir --> WriteLocalDoc[\"Write Summary<br>to docs/archive/\"]
+    WriteLocalDoc --> UpdateConfluence[\"Update/Create<br>Confluence Page\"]
+    UpdateConfluence --> UpdateActive[\"Update<br>activeContext.md\"]
+    %% LOCAL DOCS & CONFLUENCE INTEGRATION END
+
+    UpdateActive --> Reset[\"Reset for<br>Next Task\"]
+
+    %% Node Styles
+    style CreateArchive fill:#87CEEB,stroke:#4682B4,color:black
+    style VerifyDocsDir fill:#DAA520,stroke:#B8860B,color:black
+    style WriteLocalDoc fill:#90EE90,stroke:#3CB371,color:black
+    style UpdateConfluence fill:#2dce89,stroke:#24a46d,color:white
+    style UpdateActive fill:#FFD700,stroke:#B8860B,color:black
+    style Reset fill:#FFA07A,stroke:#CD5C5C,color:black
 ```
 
 ## 📋 ARCHIVE DOCUMENT STRUCTURE
@@ -250,7 +265,9 @@ When archiving is complete, update tasks.md with:
 ✓ ARCHIVE VERIFICATION
 - Reflection document reviewed? [YES/NO]
 - Archive document created with all sections? [YES/NO]
-- Archive document placed in correct location? [YES/NO]
+- Archive document placed in correct location (docs/archive/)? [YES/NO]
+- **Local summary file created in docs/archive/? [YES/NO]**
+- **Confluence page created/updated in configured space? [YES/NO]**
 - tasks.md marked as completed? [YES/NO]
 - progress.md updated with archive reference? [YES/NO]
 - activeContext.md updated for next task? [YES/NO]
@@ -262,16 +279,42 @@ When archiving is complete, update tasks.md with:
 
 ## 🔄 TASK COMPLETION NOTIFICATION
 
-When archiving is complete, notify user with:
+Before the final notification, add steps for local docs and Confluence:
+
+- **Verify/Create Local Directory**:
+    - **Action**: Check if `docs/archive/` exists. If not, create it using appropriate terminal commands.
+- **Write Local Summary**: 
+    - **Action**: Read the generated archive summary (from the process leading to `CreateArchive`).
+    - **Action**: Create a new file in `docs/archive/` named like `$PROJECT_KEY-XXX_summary_YYYYMMDD.md` (using Jira ID and date).
+    - **Action**: Write the summary content to this new file.
+- **Update Confluence Page**:
+    - **Configuration Reading**:
+        - **Action**: Read the `integration_config.md` file to get Confluence configuration.
+        - **Data**: Extract `Space Key` for Confluence.
+    - **Action**: Read the generated archive summary.
+    - **Action**: Call `mcp_mcp-atlassian_confluence_create_page` (or potentially `update_page` if a standard page per project exists).
+    - **Parameters**:
+        - `space_key`: Space key from configuration
+        - `title`: "Task Summary: $PROJECT_KEY-XXX - [Task Title]"
+        - `content`: Markdown summary content.
+        - `parent_id`: (Optional)
+    - **Error Handling**: If MCP call fails, report error, try again once. If it fails again, report error and ask user how to proceed.
+
+Then show the final notification:
 
 ```
 ## TASK ARCHIVED
 
 ✅ Archive document created in docs/archive/
+✅ Local summary file saved in docs/archive/
+✅ Confluence page created/updated in configured space
 ✅ All task documentation preserved
 ✅ Memory Bank updated with references
-✅ Task marked as COMPLETED
+✅ Task marked as COMPLETED in tasks.md
 
 → Memory Bank is ready for the next task
 → To start a new task, use VAN MODE
-``` 
+```
+
+
+*Примечание для ИИ: Помните про правила обработки ошибок MCP (повторить раз) и удаления временных файлов, если они использовались.* 

@@ -3,7 +3,6 @@ description: Visual process map for CREATIVE mode (Design Decisions)
 globs: "**/creative*/**", "**/design*/**", "**/decision*/**"
 alwaysApply: false
 ---
-
 # CREATIVE MODE: DESIGN PROCESS MAP
 
 > **TL;DR:** This visual map guides the CREATIVE mode process, focusing on structured design decision-making for components that require deeper exploration before implementation.
@@ -66,6 +65,25 @@ graph TD
     MorePhases -->|"Yes"| SelectPhase
     MorePhases -->|"No"| VerifyComplete["Verify All<br>Phases Complete"]
     VerifyComplete --> NotifyComplete["Signal Creative<br>Phases Complete"]
+
+    VerifyComplete -->|"Yes"| CreativeComplete[\"CREATIVE COMPLETE<br>Design Finalized\"]
+
+    %% JIRA/CONFLUENCE INTEGRATION START
+    CreativeComplete --> UpdateJiraStatus[\"Update Jira Status to 'To Do'\"]
+    UpdateJiraStatus --> ReadCreativeDoc[\"Read creative-*.md<br>Content\"]
+    ReadCreativeDoc --> CreateConfluencePage[\"Create Confluence Page\"]
+    CreateConfluencePage --> SuggestVANQA[\"Suggest VAN QA Mode\"]
+    %% JIRA/CONFLUENCE INTEGRATION END
+
+    VerifyComplete -->|"No"| RefineDesign[\"Refine Design<br>Decisions\"]
+    RefineDesign --> ExploreOptions
+
+    style CreativeComplete fill:#10b981,stroke:#059669,color:white
+    %% Integration Node Styles
+    style UpdateJiraStatus fill:#5e72e4,stroke:#324cdd,color:white
+    style ReadCreativeDoc fill:#ffb347,stroke:#ff9f0f,color:black
+    style CreateConfluencePage fill:#2dce89,stroke:#24a46d,color:white
+    style SuggestVANQA fill:#10b981,stroke:#059669,color:white
 ```
 
 ## 📋 CREATIVE PHASE DOCUMENT FORMAT
@@ -221,4 +239,45 @@ When all creative phases are complete, notify user with:
 ✅ Implementation plan updated
 
 → NEXT RECOMMENDED MODE: IMPLEMENT MODE
-``` 
+```
+
+## 🎨 DETAILED CREATIVE WORKFLOW STEPS
+
+### Step 5: Finalize Design and Prepare for Validation
+
+- **Configuration Reading**:
+    - **Action**: Read the `integration_config.md` file to get Jira and Confluence configurations.
+    - **Data**: Extract `Project Key`, Jira status for CREATIVE phase (`To Do`), and `Space Key` for Confluence.
+
+- **Consolidate**: Ensure all design decisions are documented in the relevant `creative-*.md` file.
+- **Verify**: Confirm the design is complete and ready for technical validation.
+- **Update Jira Status**:
+    - **Action**: Read `tasks.md` to find the current task and its Jira ID (e.g., `[Jira: $PROJECT_KEY-123]`).
+    - **Action**: Call `mcp_mcp-atlassian_jira_update_issue`.
+    - **Parameters**:
+        - `issue_key`: The Jira ID retrieved from `tasks.md`.
+        - `fields`: `'{"status": {"name": "$STATUS_NAME"}}'` where `$STATUS_NAME` is from the configuration (e.g., "To Do").
+        - *Note: May require `transition_issue` if direct update fails*.
+    - **Error Handling**: If MCP call fails, report error, try again once. If it fails again, report error and ask user how to proceed.
+- **Create Confluence Page**:
+    - **Action**: Identify and read the content of the finalized `creative-*.md` file associated with the current task (e.g., based on `activeContext.md`).
+    - **Action**: Call `mcp_mcp-atlassian_confluence_create_page`.
+    - **Parameters**:
+        - `space_key`: From configuration file (e.g., "YOUR_CONFLUENCE_SPACE_KEY")
+        - `title`: Combine task title (from `tasks.md`) with " - Design Documentation".
+        - `content`: The markdown content read from the `creative-*.md` file.
+        - `parent_id`: (Optional) Specify a parent page ID if you want to structure documentation hierarchically.
+    - **Error Handling**: If MCP call fails, report error, try again once. If it fails again, report error and ask user how to proceed.
+- **Transition**: Signal completion and suggest switching to VAN QA mode for technical validation.
+
+```
+✓ CREATIVE COMPLETE
+Design documentation finalized in creative-*.md.
+Jira Story status updated based on configuration.
+Confluence page created in configured space.
+Ready for technical validation.
+Type 'VAN QA' to begin validation.
+```
+
+
+*Примечание для ИИ: Помните про правила обработки ошибок MCP (повторить раз) и удаления временных файлов, если они использовались.* 

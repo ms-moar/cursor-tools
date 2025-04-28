@@ -54,7 +54,21 @@ graph TD
     %% Completion & Transition
     L1Update & L2Update & L34Update --> CreateReflection["Create<br>reflection.md"]
     CreateReflection --> UpdateSystem["Update System<br>Documentation"]
-    UpdateSystem --> Transition["NEXT MODE:<br>ARCHIVE MODE"]
+    UpdateSystem --> VerifyReview["Verify<br>Reflection"]
+    VerifyReview -->|"Yes"| ReflectComplete[\"REFLECT COMPLETE<br>Ready for ARCHIVE\"]
+
+    %% JIRA INTEGRATION START
+    ReflectComplete --> UpdateJiraStatus[\"Update Jira Status to 'Готово'\"]
+    UpdateJiraStatus --> SuggestArchive[\"Suggest ARCHIVE Mode\"]
+    %% JIRA INTEGRATION END
+
+    VerifyReview -->|"No"| ReviseWork[\"Revise Work or<br>Implementation\"]
+    ReviseWork --> ReviewProcess
+
+    style ReflectComplete fill:#10b981,stroke:#059669,color:white
+    %% JIRA Node Styles
+    style UpdateJiraStatus fill:#5e72e4,stroke:#324cdd,color:white
+    style SuggestArchive fill:#10b981,stroke:#059669,color:white
 ```
 
 ## 📋 REFLECTION STRUCTURE
@@ -231,4 +245,33 @@ When reflection is complete, notify user with:
 ✅ tasks.md updated with reflection status
 
 → NEXT RECOMMENDED MODE: ARCHIVE MODE
+```
+
+## 🤔 DETAILED REFLECTION STEPS
+
+### Step 5: Finalize Review and Prepare for Archiving
+
+- **Configuration Reading**:
+    - **Action**: Read the `integration_config.md` file to get Jira configuration.
+    - **Data**: Extract `Project Key` and Jira status for REFLECT phase (e.g., `Готово`).
+
+- **Consolidate Feedback**: Ensure all review notes and potential follow-up actions are documented.
+- **Verify Completion**: Confirm that the reflection phase for the task is complete.
+- **Update Jira Status**:
+    - **Action**: Read `tasks.md` to find the current task and its Jira ID.
+    - **Action**: Call `mcp_mcp-atlassian_jira_update_issue`.
+    - **Parameters**:
+        - `issue_key`: The Jira ID retrieved from `tasks.md`.
+        - `fields`: `'{"status": {"name": "$STATUS_NAME"}}'` where `$STATUS_NAME` is from the configuration (e.g., "Готово").
+        - *Note: May require `transition_issue` if direct update fails*.
+    - **Error Handling**: Retry once on MCP failure, then report and ask user.
+- **Transition**: Signal completion and suggest switching to ARCHIVE mode.
+
+```
+✓ REFLECT COMPLETE
+Task review finalized.
+Jira Story status updated based on configuration.
+Ready for ARCHIVE mode.
+Type 'ARCHIVE' to begin final documentation.
+
 ``` 
