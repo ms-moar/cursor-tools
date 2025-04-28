@@ -3,3 +3,67 @@ description:
 globs: 
 alwaysApply: false
 ---
+
+```
+✓ PLAN COMPLETE
+Jira Story created (linked to Epic if specified) and recorded in tasks.md.
+Detailed plan finalized. Ready for CREATIVE mode.
+Type 'CREATIVE' to begin design decisions.
+```
+
+// ... existing code ...
+## 📋 DETAILED PLANNING WORKFLOW STEPS
+
+// ... existing steps ...
+
+### Step 6: Finalize Plan and Prepare for Transition
+
+- **Configuration Reading**:
+    - **Action**: Read the `integration_config.md` file to get Jira configuration.
+    - **Data**: Extract `Project Key`, `Default Issue Type`.
+
+- **Review**: Ensure all requirements are captured and the plan is complete.
+- **Verify**: Confirm readiness to move to the CREATIVE phase.
+
+- **Gather Jira Components/Labels**:
+    - **Action**: Ask the user:
+        - "Пожалуйста, укажите **существующие** компоненты для задачи Jira (через запятую):"
+        - "Пожалуйста, укажите **существующие** метки для задачи Jira (через запятую):"
+    - **Input**: User provides components, labels.
+    - *Примечание для ИИ: Напомнить пользователю, что компоненты/метки должны существовать в проекте, указанном в конфигурационном файле.*
+
+- **Handle Epic Linking**:
+    - **Action**: Ask the user: "Эта задача является частью более крупной цели или набора функций (Эпика)? (Да/Нет)"
+    - **If Yes**:
+        - Ask: "Опишите эту цель несколькими ключевыми словами."
+        - Search: Call `mcp_mcp-atlassian_jira_search` with `jql="project = $PROJECT_KEY AND issuetype = Epic AND summary ~ '\"user keywords\"'"`, `limit=5`, `fields="summary"`, where `$PROJECT_KEY` is from configuration.
+        - Ask: Present search results (or "Не найдено подходящих Эпиков."). "Какой из них подходит? Укажите ключ (например, $PROJECT_KEY-10), или скажите 'Создать новый Эпик', или 'Пропустить'."
+        - **If user provides key**: Store the key for `parent` field.
+        - **If user says 'Создать новый Эпик'**: Ask for Epic Name. Call `mcp_mcp-atlassian_jira_create_issue` with `project_key` from configuration, `issue_type="Epic"`, `summary="User's Epic Name"`, `assignee="currentUser()"`. Get the new Epic key. Store it for `parent` field.
+        - **If user says 'Пропустить' or provides no valid input**: Set Epic key to `null`.
+    - **If No**: Set Epic key to `null`.
+
+- **Jira Story Creation**:
+    - **Action**: Call `mcp_mcp-atlassian_jira_create_issue`.
+    - **Parameters**:
+        - `project_key`: From configuration file
+        - `issue_type`: From configuration file (Default: "Story")
+        - `summary`: Extract from the main task title.
+        - `description`: Extract detailed plan/description.
+        - `assignee`: "currentUser()"
+        - `components`: User-provided components string.
+        - `additional_fields`: Construct JSON string. Always include `"labels": ["label1", "label2", ...]`. If an Epic key was determined above (not `null`), also include `"parent": {"key": "EPIC_KEY_HERE"}`.
+    - **Error Handling**: Retry once on MCP failure, then report and ask user.
+    - **Output**: Jira Issue Key (e.g., `$PROJECT_KEY-123`).
+
+- **Update `tasks.md`**:
+    - **Action**: Append the retrieved Jira Issue Key `[Jira: $PROJECT_KEY-123]`.
+
+- **Transition**: Signal completion and suggest CREATIVE mode.
+
+```
+
+// ... existing code ...
+
+
+
