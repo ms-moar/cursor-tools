@@ -344,6 +344,7 @@ When the build is complete, notify user with:
 
 ### Step 9: Suggest Next Mode (QA/REFLECT)
 *   **Action**: Update `tasks.md` (via proposed `edit_file`) to indicate implementation completion.
+*   **Reminder**: "Если реализация **затронула архитектуру** (например, добавлены новые компоненты, изменены потоки данных), не забудьте обновить `/docs/architecture.md`. Вы можете попросить меня помочь с этим."
 *   **Report**: "Реализация завершена. Рекомендуемый следующий шаг: Режим [QA/REFLECT]. Введите '[QA/REFLECT]' для перехода."
 *   *(Логика выбора QA или REFLECT может зависеть от процесса)*
 

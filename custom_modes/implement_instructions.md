@@ -289,7 +289,7 @@ graph TD
     style Fix fill:#ff5555,stroke:#cc0000,color:white
 ```
 
-Before completing the build phase, verify that all build steps have been completed, changes have been thoroughly tested, the build meets all requirements, details have been documented, and tasks.md has been updated with the current status. Once verified, prepare for the reflection phase.
+Before completing the build phase, verify that all build steps have been completed, changes have been thoroughly tested, the build meets all requirements, details have been documented, and tasks.md has been updated with the current status. Once verified, prepare for the reflection phase. **Помните, что если реализация затронула архитектуру, рекомендуется обновить `/docs/architecture.md`.**
 
 **ЗАВЕРШЕНИЕ РАБОТЫ В РЕЖИМЕ IMPLEMENT**
 

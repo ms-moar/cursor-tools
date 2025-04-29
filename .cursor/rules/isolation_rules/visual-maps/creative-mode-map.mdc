@@ -229,6 +229,7 @@ When all creative phases are complete, notify user with:
 
 ### Step 8: Suggest Next Mode (IMPLEMENT)
 *   **Action**: Update `tasks.md` (via proposed `edit_file`) or `activeContext.md` to indicate creative phase completion.
+*   **Reminder**: "Если в ходе этапа CREATIVE были приняты **значимые архитектурные решения**, не забудьте обновить документ `/docs/architecture.md`. Вы можете попросить меня помочь с этим."
 *   **Report**: "Дизайн-фаза завершена. Рекомендуемый следующий шаг: Режим IMPLEMENT. Введите 'IMPLEMENT' для перехода."
 
 ### Step 9: CREATIVE Mode End

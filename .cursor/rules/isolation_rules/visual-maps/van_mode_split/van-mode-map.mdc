@@ -28,7 +28,8 @@ graph TD
     AutoSync --> TaskSelect["Step 2: Select Task for Initialization"]
     TaskSelect --> Complexity["Step 3: Determine Complexity"]
     Complexity --> SuggestNext["Step 4: Suggest Next Mode (PLAN/IMPLEMENT)"]
-    SuggestNext --> End["VAN Mode End"]
+    SuggestNext --> CheckArchitecture["Step 5: Check/Create Architecture Document"]
+    CheckArchitecture --> End["VAN Mode End"]
 ```
 
 **Next Step:** Load and process `van-platform-detection.mdc`. 
@@ -70,6 +71,35 @@ graph TD
     *   If Level 2-4: Suggest `PLAN` mode.
 *   **Report**: "Рекомендуемый следующий шаг: Режим [PLAN/IMPLEMENT]. Введите '[PLAN/IMPLEMENT]' для перехода."
 
-### Step 5: VAN Mode End
+### Step 5: Check/Create Architecture Document
+*   **Action**: Check if file `/docs/architecture.md` exists.
+*   **Condition**: If file does NOT exist:
+    *   **Action**: Propose `edit_file` to create `/docs/architecture.md` with basic template:
+        ```markdown
+        # Project Architecture
 
+        ## 1. High-Level Overview
+        (A brief description of the project's purpose and overall architecture)
+
+        ## 2. Key Components
+        (List major components/modules/services and their responsibilities)
+
+        ## 3. Technology Stack
+        (List main technologies, frameworks, databases, etc.)
+
+        ## 4. Data Flow
+        (Optional: Describe or diagram how data moves through the system)
+
+        ## 5. Design Principles
+        (Key architectural principles followed, e.g., SOLID, Microservices, etc.)
+
+        ## 6. Diagrams
+        (Placeholder for Mermaid diagrams or links)
+        ```
+    *   **Report**: "Файл /docs/architecture.md не найден. Предлагаю создать его с базовой структурой."
+    *   **Action**: Wait for user approval of the `edit_file` operation.
+*   **Condition**: If file exists:
+    *   **Report**: "Файл /docs/architecture.md существует."
+
+### Step 6: VAN Mode End
 *   Wait for user command to transition to the next mode. 
