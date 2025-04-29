@@ -11,79 +11,15 @@ alwaysApply: false
 
 ```mermaid
 graph TD
-    Start["START CREATIVE MODE"] --> ReadTasks["Read tasks.md<br>For Creative Requirements"]
-    
-    %% Initial Assessment
-    ReadTasks --> VerifyPlan{"Plan Complete<br>& Creative Phases<br>Identified?"}
-    VerifyPlan -->|"No"| ReturnPlan["Return to<br>PLAN Mode"]
-    VerifyPlan -->|"Yes"| IdentifyPhases["Identify Creative<br>Phases Required"]
-    
-    %% Creative Phase Selection
-    IdentifyPhases --> SelectPhase["Select Next<br>Creative Phase"]
-    SelectPhase --> PhaseType{"Creative<br>Phase Type?"}
-    
-    %% Creative Phase Types
-    PhaseType -->|"UI/UX<br>Design"| UIPhase["UI/UX CREATIVE PHASE<br>Core/creative-phase-uiux.md"]
-    PhaseType -->|"Architecture<br>Design"| ArchPhase["ARCHITECTURE CREATIVE PHASE<br>Core/creative-phase-architecture.md"]
-    PhaseType -->|"Data Model<br>Design"| DataPhase["DATA MODEL CREATIVE PHASE<br>Core/creative-phase-data.md"]
-    PhaseType -->|"Algorithm<br>Design"| AlgoPhase["ALGORITHM CREATIVE PHASE<br>Core/creative-phase-algorithm.md"]
-    
-    %% UI/UX Creative Phase
-    UIPhase --> UI_Problem["Define UI/UX<br>Problem"]
-    UI_Problem --> UI_Research["Research UI<br>Patterns"]
-    UI_Research --> UI_Options["Explore UI<br>Options"]
-    UI_Options --> UI_Evaluate["Evaluate User<br>Experience"]
-    UI_Evaluate --> UI_Decision["Make Design<br>Decision"]
-    UI_Decision --> UI_Document["Document UI<br>Design"]
-    
-    %% Architecture Creative Phase
-    ArchPhase --> Arch_Problem["Define Architecture<br>Challenge"]
-    Arch_Problem --> Arch_Options["Explore Architecture<br>Options"]
-    Arch_Options --> Arch_Analyze["Analyze Tradeoffs"]
-    Arch_Analyze --> Arch_Decision["Make Architecture<br>Decision"]
-    Arch_Decision --> Arch_Document["Document<br>Architecture"]
-    Arch_Document --> Arch_Diagram["Create Architecture<br>Diagram"]
-    
-    %% Data Model Creative Phase
-    DataPhase --> Data_Requirements["Define Data<br>Requirements"]
-    Data_Requirements --> Data_Structure["Design Data<br>Structure"]
-    Data_Structure --> Data_Relations["Define<br>Relationships"]
-    Data_Relations --> Data_Validation["Design<br>Validation"]
-    Data_Validation --> Data_Document["Document<br>Data Model"]
-    
-    %% Algorithm Creative Phase
-    AlgoPhase --> Algo_Problem["Define Algorithm<br>Problem"]
-    Algo_Problem --> Algo_Options["Explore Algorithm<br>Approaches"]
-    Algo_Options --> Algo_Evaluate["Evaluate Time/Space<br>Complexity"]
-    Algo_Evaluate --> Algo_Decision["Make Algorithm<br>Decision"]
-    Algo_Decision --> Algo_Document["Document<br>Algorithm"]
-    
-    %% Documentation & Completion
-    UI_Document & Arch_Diagram & Data_Document & Algo_Document --> CreateDoc["Create Creative<br>Phase Document"]
-    CreateDoc --> UpdateTasks["Update tasks.md<br>with Decision"]
-    UpdateTasks --> MorePhases{"More Creative<br>Phases?"}
-    MorePhases -->|"Yes"| SelectPhase
-    MorePhases -->|"No"| VerifyComplete["Verify All<br>Phases Complete"]
-    VerifyComplete --> NotifyComplete["Signal Creative<br>Phases Complete"]
-
-    VerifyComplete -->|"Yes"| CreativeComplete[\"CREATIVE COMPLETE<br>Design Finalized\"]
-
-    %% JIRA/CONFLUENCE INTEGRATION START
-    CreativeComplete --> UpdateJiraStatus[\"Update Jira Status to 'To Do'\"]
-    UpdateJiraStatus --> ReadCreativeDoc[\"Read creative-*.md<br>Content\"]
-    ReadCreativeDoc --> CreateConfluencePage[\"Create Confluence Page\"]
-    CreateConfluencePage --> SuggestVANQA[\"Suggest VAN QA Mode\"]
-    %% JIRA/CONFLUENCE INTEGRATION END
-
-    VerifyComplete -->|"No"| RefineDesign[\"Refine Design<br>Decisions\"]
-    RefineDesign --> ExploreOptions
-
-    style CreativeComplete fill:#10b981,stroke:#059669,color:white
-    %% Integration Node Styles
-    style UpdateJiraStatus fill:#5e72e4,stroke:#324cdd,color:white
-    style ReadCreativeDoc fill:#ffb347,stroke:#ff9f0f,color:black
-    style CreateConfluencePage fill:#2dce89,stroke:#24a46d,color:white
-    style SuggestVANQA fill:#10b981,stroke:#059669,color:white
+    Start["CREATIVE Mode Start"] --> AutoSync["Step 1: Auto-Sync Completed Tasks"]
+    AutoSync --> TaskSelect["Step 2: Select Task for Creative Work"]
+    TaskSelect --> CheckName["Step 3: Check Name & Propose Fixes"]
+    CheckName --> CheckStatusAssignee["Step 4: Check Status/Assignee & Propose Updates"]
+    CheckStatusAssignee --> UpdateTasksMD["Step 5: Propose tasks.md Update"]
+    UpdateTasksMD --> GitCheck["Step 6: Check Git Branch"]
+    GitCheck --> CreativeWork["Step 7: Execute Creative Design Process"]
+    CreativeWork --> SuggestNext["Step 8: Suggest Next Mode (IMPLEMENT)"]
+    SuggestNext --> End["CREATIVE Mode End"]
 ```
 
 ## 📋 CREATIVE PHASE DOCUMENT FORMAT
@@ -243,41 +179,60 @@ When all creative phases are complete, notify user with:
 
 ## 🎨 DETAILED CREATIVE WORKFLOW STEPS
 
-### Step 5: Finalize Design and Prepare for Validation
+### Step 1: Auto-Sync Completed Tasks
+*   _(Логика аналогична Step 1 в VAN Mode)_*
 
-- **Configuration Reading**:
-    - **Action**: Read the `integration_config.md` file to get Jira and Confluence configurations.
-    - **Data**: Extract `Project Key`, Jira status for CREATIVE phase (`To Do`), and `Space Key` for Confluence.
+### Step 2: Select Task for Creative Work
+*   **Action**: Ask user: "У вас есть ID конкретной задачи для креативной работы? Иначе я поищу задачи в статусе 'To Do'/'В разработке'."
+*   **Condition**: If user provides an ID: Store `issue_key`.
+*   **Condition**: If user does not provide ID:
+    *   **Action**: Call `mcp_mcp-atlassian_jira_search` with JQL like `status IN ('To Do', 'In Development') AND assignee = currentUser() ORDER BY updated DESC`, limit 5-10, fields=summary,status.
+    *   **Action**: Present list to user.
+    *   **Action**: Ask user to select task ID.
+    *   Store selected `issue_key`.
+*   **Error Handling**: If no task selected, stop.
+*   **Report**: Confirm task: "Выбрана задача [issue_key] - [Название]."
 
-- **Consolidate**: Ensure all design decisions are documented in the relevant `creative-*.md` file.
-- **Verify**: Confirm the design is complete and ready for technical validation.
-- **Update Jira Status**:
-    - **Action**: Read `tasks.md` to find the current task and its Jira ID (e.g., `[Jira: $PROJECT_KEY-123]`).
-    - **Action**: Call `mcp_mcp-atlassian_jira_update_issue`.
-    - **Parameters**:
-        - `issue_key`: The Jira ID retrieved from `tasks.md`.
-        - `fields`: `'{"status": {"name": "$STATUS_NAME"}}'` where `$STATUS_NAME` is from the configuration (e.g., "To Do").
-        - *Note: May require `transition_issue` if direct update fails*.
-    - **Error Handling**: If MCP call fails, report error, try again once. If it fails again, report error and ask user how to proceed.
-- **Create Confluence Page**:
-    - **Action**: Identify and read the content of the finalized `creative-*.md` file associated with the current task (e.g., based on `activeContext.md`).
-    - **Action**: Call `mcp_mcp-atlassian_confluence_create_page`.
-    - **Parameters**:
-        - `space_key`: From configuration file (e.g., "YOUR_CONFLUENCE_SPACE_KEY")
-        - `title`: Combine task title (from `tasks.md`) with " - Design Documentation".
-        - `content`: The markdown content read from the `creative-*.md` file.
-        - `parent_id`: (Optional) Specify a parent page ID if you want to structure documentation hierarchically.
-    - **Error Handling**: If MCP call fails, report error, try again once. If it fails again, report error and ask user how to proceed.
-- **Transition**: Signal completion and suggest switching to VAN QA mode for technical validation.
+### Step 3: Check Name & Propose Fixes
+*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `issue_key` (fields: summary).
+*   **Action**: Compare Jira summary with name in `tasks.md`.
+*   **Condition**: If discrepancy:
+    *   **Action**: Propose `edit_file` for `tasks.md`.
+    *   **Action**: Wait for approval.
 
-```
-✓ CREATIVE COMPLETE
-Design documentation finalized in creative-*.md.
-Jira Story status updated based on configuration.
-Confluence page created in configured space.
-Ready for technical validation.
-Type 'VAN QA' to begin validation.
-```
+### Step 4: Check Status/Assignee & Propose Updates
+*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `issue_key` (fields: status, assignee).
+*   **Action**: Check status. Expected: 'To Do' or 'In Development'.
+*   **Action**: Check assignee. Expected: `currentUser()`.
+*   **Condition**: If status is wrong (e.g., 'Backlog'):
+    *   **Action**: Propose `jira_transition_issue` to 'To Do'/'In Development'.
+*   **Condition**: If assignee is wrong/empty:
+    *   **Action**: Propose `jira_update_issue` to set assignee to `currentUser()`.
+*   **Condition**: If status is 'In Progress' and assignee is someone else:
+    *   **Action**: Report **STOP** (Potential conflict). Stop process.
+*   **Action**: Wait for user approval of any proposed MCP actions.
+
+### Step 5: Propose tasks.md Update
+*   **Condition**: If Step 4 resulted in successful Jira update(s):
+    *   **Action**: Propose `edit_file` on `tasks.md` to update status/assignee for the `issue_key`.
+    *   **Action**: Wait for approval.
+
+### Step 6: Check Git Branch
+*   **Action**: Ask user: "Вы находитесь в отдельной Git-ветке для этой задачи ([issue_key])? Если нет, рекомендуется создать ее сейчас (`git checkout -b ...`)."
+*   **(Optional Action):** Propose `run_terminal_cmd` for `git checkout -b feature/[issue_key]` if user agrees.
+
+### Step 7: Execute Creative Design Process
+*   **Action**: Load and follow the logic from relevant creative phase rules (e.g., `creative-phase-architecture.mdc`).
+*   **Action**: Generate design documentation (e.g., in `creative-[issue_key].md`).
+*   **Instruction**: Ensure process follows structured thinking (options, pros/cons, rationale).
+*   **Report**: Inform user on progress and completion of design.
+
+### Step 8: Suggest Next Mode (IMPLEMENT)
+*   **Action**: Update `tasks.md` (via proposed `edit_file`) or `activeContext.md` to indicate creative phase completion.
+*   **Report**: "Дизайн-фаза завершена. Рекомендуемый следующий шаг: Режим IMPLEMENT. Введите 'IMPLEMENT' для перехода."
+
+### Step 9: CREATIVE Mode End
+*   Wait for user command.
 
 
 *Примечание для ИИ: Помните про правила обработки ошибок MCP (повторить раз) и удаления временных файлов, если они использовались.* 

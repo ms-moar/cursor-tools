@@ -3,67 +3,50 @@ description:
 globs: 
 alwaysApply: false
 ---
+# PLAN MODE: LLM-Powered Planning Workflow
 
-```
-✓ PLAN COMPLETE
-Jira Story created (linked to Epic if specified) and recorded in tasks.md.
-Detailed plan finalized. Ready for CREATIVE mode.
-Type 'CREATIVE' to begin design decisions.
-```
+## OVERVIEW
+This mode uses the AI's Large Language Model (LLM) capabilities to analyze the project goal and context, then propose a high-level plan structured into Epics, Sprints, and Tasks. The output of this mode is the generated plan text, intended for review and subsequent manual refinement or use in updating `tasks.md`.
 
-// ... existing code ...
-## 📋 DETAILED PLANNING WORKFLOW STEPS
+## WORKFLOW
 
-// ... existing steps ...
-
-### Step 6: Finalize Plan and Prepare for Transition
-
-- **Configuration Reading**:
-    - **Action**: Read the `integration_config.md` file to get Jira configuration.
-    - **Data**: Extract `Project Key`, `Default Issue Type`.
-
-- **Review**: Ensure all requirements are captured and the plan is complete.
-- **Verify**: Confirm readiness to move to the CREATIVE phase.
-
-- **Gather Jira Components/Labels**:
-    - **Action**: Ask the user:
-        - "Пожалуйста, укажите **существующие** компоненты для задачи Jira (через запятую):"
-        - "Пожалуйста, укажите **существующие** метки для задачи Jira (через запятую):"
-    - **Input**: User provides components, labels.
-    - *Примечание для ИИ: Напомнить пользователю, что компоненты/метки должны существовать в проекте, указанном в конфигурационном файле.*
-
-- **Handle Epic Linking**:
-    - **Action**: Ask the user: "Эта задача является частью более крупной цели или набора функций (Эпика)? (Да/Нет)"
-    - **If Yes**:
-        - Ask: "Опишите эту цель несколькими ключевыми словами."
-        - Search: Call `mcp_mcp-atlassian_jira_search` with `jql="project = $PROJECT_KEY AND issuetype = Epic AND summary ~ '\"user keywords\"'"`, `limit=5`, `fields="summary"`, where `$PROJECT_KEY` is from configuration.
-        - Ask: Present search results (or "Не найдено подходящих Эпиков."). "Какой из них подходит? Укажите ключ (например, $PROJECT_KEY-10), или скажите 'Создать новый Эпик', или 'Пропустить'."
-        - **If user provides key**: Store the key for `parent` field.
-        - **If user says 'Создать новый Эпик'**: Ask for Epic Name. Call `mcp_mcp-atlassian_jira_create_issue` with `project_key` from configuration, `issue_type="Epic"`, `summary="User's Epic Name"`, `assignee="currentUser()"`. Get the new Epic key. Store it for `parent` field.
-        - **If user says 'Пропустить' or provides no valid input**: Set Epic key to `null`.
-    - **If No**: Set Epic key to `null`.
-
-- **Jira Story Creation**:
-    - **Action**: Call `mcp_mcp-atlassian_jira_create_issue`.
-    - **Parameters**:
-        - `project_key`: From configuration file
-        - `issue_type`: From configuration file (Default: "Story")
-        - `summary`: Extract from the main task title.
-        - `description`: Extract detailed plan/description.
-        - `assignee`: "currentUser()"
-        - `components`: User-provided components string.
-        - `additional_fields`: Construct JSON string. Always include `"labels": ["label1", "label2", ...]`. If an Epic key was determined above (not `null`), also include `"parent": {"key": "EPIC_KEY_HERE"}`.
-    - **Error Handling**: Retry once on MCP failure, then report and ask user.
-    - **Output**: Jira Issue Key (e.g., `$PROJECT_KEY-123`).
-
-- **Update `tasks.md`**:
-    - **Action**: Append the retrieved Jira Issue Key `[Jira: $PROJECT_KEY-123]`.
-
-- **Transition**: Signal completion and suggest CREATIVE mode.
-
+```mermaid
+graph TD
+    Start["PLAN Mode Start"] --> AutoSync["Step 1: Auto-Sync Completed Tasks (Optional)"]
+    AutoSync --> ReadContext["Step 2: Read Project Context"]
+    ReadContext --> IdentifyGoal["Step 3: Identify Planning Goal"]
+    IdentifyGoal --> GeneratePlan["Step 4: Generate Epic/Sprint/Task Plan (LLM Task)"]
+    GeneratePlan --> OutputPlan["Step 5: Output Generated Plan Text"]
+    OutputPlan --> End["PLAN Mode End - Review Plan"]
 ```
 
-// ... existing code ...
+## DETAILED STEPS
 
+### Step 1: Auto-Sync Completed Tasks (Optional Check)
+*   **(Optional) Action**: Perform the automatic check for tasks completed in Jira but not updated in `tasks.md`, proposing `edit_file` if needed. (Keep this step for data hygiene).
 
+### Step 2: Read Project Context
+*   **Action**: Read relevant context files to understand the project goals and current state. Primarily focus on:
+    *   `projectbrief.md` (If available)
+    *   `activeContext.md` (If available and relevant)
+    *   `tasks.md` (To understand existing tasks and structure)
+    *   User's initial request for planning.
 
+### Step 3: Identify Planning Goal
+*   **Action**: Based on the context read in Step 2, clearly state the main goal or feature that needs to be planned. Ask the user for clarification if the goal is unclear.
+*   **Report**: "Цель планирования: [Сформулированная цель]."
+
+### Step 4: Generate Epic/Sprint/Task Plan (LLM Task)
+*   **Instruction (Prompt for LLM)**: "Проанализируй сформулированную цель (из Шага 3) и прочитанный контекст проекта. Используя свое понимание разработки ПО и управления проектами:
+    1.  Определи 2-5 крупных логических блоков работы (**Эпиков**), необходимых для достижения цели. Дай каждому Эпику понятное название.
+    2.  Для **каждого Эпика** предложи список **конкретных, выполнимых задач**, необходимых для его реализации. Формулируй задачи четко.
+    3.  Сгруппируй предложенные задачи в последовательные **Спринты** (например, по 3-7 задач в каждом, или по предполагаемой сложности на 1-2 недели работы). Назови Спринты (например, 'Спринт 1', 'Спринт 2' или по датам).
+    4.  Отформатируй весь план, используя Markdown: Заголовки 2-го уровня (`##`) для Эпиков, Заголовки 3-го уровня (`###`) для Спринтов, и списки (`- [ ]`) для задач."
+*   **(Internal LLM Execution)**: The AI model will process this prompt and generate the plan structure based on its understanding.
+
+### Step 5: Output Generated Plan Text
+*   **Action**: Output the complete plan text generated by the LLM in the previous step directly into the chat for user review.
+*   **Report**: "Вот предложенный план, разбитый по Эпикам и Спринтам. Пожалуйста, просмотрите его. Вы можете использовать этот план для обновления `tasks.md` или дальнейшего обсуждения."
+
+### Step 6: PLAN Mode End - Review Plan
+*   The mode concludes after presenting the plan. Further actions (like editing `tasks.md` based on this plan, creating Jira tickets, or moving to another mode) should be initiated by the user in subsequent requests.
