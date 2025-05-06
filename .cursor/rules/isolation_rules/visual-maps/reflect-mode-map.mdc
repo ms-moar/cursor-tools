@@ -58,7 +58,7 @@ graph TD
     VerifyReview -->|"Yes"| ReflectComplete[\"REFLECT COMPLETE<br>Ready for ARCHIVE\"]
 
     %% JIRA INTEGRATION START
-    ReflectComplete --> UpdateJiraStatus[\"Update Jira Status to 'Готово'\"]
+    ReflectComplete --> UpdateJiraStatus[\"Update Jira Status to 'Done'\"]
     UpdateJiraStatus --> SuggestArchive[\"Suggest ARCHIVE Mode\"]
     %% JIRA INTEGRATION END
 
@@ -253,7 +253,7 @@ When reflection is complete, notify user with:
 
 - **Configuration Reading**:
     - **Action**: Read the `integration_config.md` file to get Jira configuration.
-    - **Data**: Extract `Project Key` and Jira status for REFLECT phase (e.g., `Готово`).
+    - **Data**: Extract `Project Key` and Jira status for REFLECT phase (e.g., `Done`).
 
 - **Consolidate Feedback**: Ensure all review notes and potential follow-up actions are documented.
 - **Verify Completion**: Confirm that the reflection phase for the task is complete.
@@ -262,7 +262,7 @@ When reflection is complete, notify user with:
     - **Action**: Call `mcp_mcp-atlassian_jira_update_issue`.
     - **Parameters**:
         - `issue_key`: The Jira ID retrieved from `tasks.md`.
-        - `fields`: `'{"status": {"name": "$STATUS_NAME"}}'` where `$STATUS_NAME` is from the configuration (e.g., "Готово").
+        - `fields`: `'{"status": {"name": "$STATUS_NAME"}}'` where `$STATUS_NAME` is from the configuration (e.g., "Done").
         - *Note: May require `transition_issue` if direct update fails*.
     - **Error Handling**: Retry once on MCP failure, then report and ask user.
 - **Transition**: Signal completion and suggest switching to ARCHIVE mode.

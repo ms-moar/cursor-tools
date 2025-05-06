@@ -317,4 +317,4 @@ Then show the final notification:
 ```
 
 
-*Примечание для ИИ: Помните про правила обработки ошибок MCP (повторить раз) и удаления временных файлов, если они использовались.* 
+*Note for AI: Remember the MCP error handling rules (retry once) and deletion of temporary files if they were used.* 

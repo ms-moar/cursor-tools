@@ -180,10 +180,10 @@ When all creative phases are complete, notify user with:
 ## 🎨 DETAILED CREATIVE WORKFLOW STEPS
 
 ### Step 1: Auto-Sync Completed Tasks
-*   _(Логика аналогична Step 1 в VAN Mode)_*
+*   *(Logic similar to Step 1 in VAN Mode)*
 
 ### Step 2: Select Task for Creative Work
-*   **Action**: Ask user: "У вас есть ID конкретной задачи для креативной работы? Иначе я поищу задачи в статусе 'To Do'/'В разработке'."
+*   **Action**: Ask user: "Do you have a specific task ID for creative work? Otherwise, I will search for tasks in 'To Do'/'In Progress' status."
 *   **Condition**: If user provides an ID: Store `issue_key`.
 *   **Condition**: If user does not provide ID:
     *   **Action**: Call `mcp_mcp-atlassian_jira_search` with JQL like `status IN ('To Do', 'In Development') AND assignee = currentUser() ORDER BY updated DESC`, limit 5-10, fields=summary,status.
@@ -191,7 +191,7 @@ When all creative phases are complete, notify user with:
     *   **Action**: Ask user to select task ID.
     *   Store selected `issue_key`.
 *   **Error Handling**: If no task selected, stop.
-*   **Report**: Confirm task: "Выбрана задача [issue_key] - [Название]."
+*   **Report**: Confirm task: "Task [issue_key] - [Name] selected."
 
 ### Step 3: Check Name & Propose Fixes
 *   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `issue_key` (fields: summary).
@@ -218,7 +218,7 @@ When all creative phases are complete, notify user with:
     *   **Action**: Wait for approval.
 
 ### Step 6: Check Git Branch
-*   **Action**: Ask user: "Вы находитесь в отдельной Git-ветке для этой задачи ([issue_key])? Если нет, рекомендуется создать ее сейчас (`git checkout -b ...`)."
+*   **Action**: Ask user: "Are you in a separate Git branch for this task ([issue_key])? If not, it's recommended to create it now (`git checkout -b ...`)."
 *   **(Optional Action):** Propose `run_terminal_cmd` for `git checkout -b feature/[issue_key]` if user agrees.
 
 ### Step 7: Execute Creative Design Process
@@ -229,11 +229,11 @@ When all creative phases are complete, notify user with:
 
 ### Step 8: Suggest Next Mode (IMPLEMENT)
 *   **Action**: Update `tasks.md` (via proposed `edit_file`) or `activeContext.md` to indicate creative phase completion.
-*   **Reminder**: "Если в ходе этапа CREATIVE были приняты **значимые архитектурные решения**, не забудьте обновить документ `/docs/architecture.md`. Вы можете попросить меня помочь с этим."
-*   **Report**: "Дизайн-фаза завершена. Рекомендуемый следующий шаг: Режим IMPLEMENT. Введите 'IMPLEMENT' для перехода."
+*   **Reminder**: "If **significant architectural decisions** were made during the CREATIVE phase, don't forget to update the /docs/architecture.md document. You can ask me to help with this."
+*   **Report**: "Design phase complete. Recommended next step: IMPLEMENT Mode. Enter 'IMPLEMENT' to proceed."
 
 ### Step 9: CREATIVE Mode End
 *   Wait for user command.
 
 
-*Примечание для ИИ: Помните про правила обработки ошибок MCP (повторить раз) и удаления временных файлов, если они использовались.* 
+*Note for AI: Remember the MCP error handling rules (retry once) and deletion of temporary files if they were used.* 

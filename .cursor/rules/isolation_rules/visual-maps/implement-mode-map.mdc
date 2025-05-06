@@ -281,10 +281,10 @@ When the build is complete, notify user with:
 ## DETAILED STEPS
 
 ### Step 1: Auto-Sync Completed Tasks
-*   _(Логика аналогична Step 1 в VAN Mode)_*
+*   *(Logic similar to Step 1 in VAN Mode)*
 
 ### Step 2: Select Task for Implementation
-*   **Action**: Ask user: "У вас есть ID конкретной задачи для реализации? Иначе я поищу задачи в статусе 'To Do'/'В разработке'."
+*   **Action**: Ask user: "Do you have a specific task ID for implementation? Otherwise, I will search for tasks in 'To Do'/'In Progress' status."
 *   **Condition**: If user provides an ID: Store `issue_key`.
 *   **Condition**: If user does not provide ID:
     *   **Action**: Call `mcp_mcp-atlassian_jira_search` with JQL like `status IN ('To Do', 'In Development') AND assignee = currentUser() ORDER BY updated DESC`, limit 5-10, fields=summary,status.
@@ -292,7 +292,7 @@ When the build is complete, notify user with:
     *   **Action**: Ask user to select task ID.
     *   Store selected `issue_key`.
 *   **Error Handling**: If no task selected, stop.
-*   **Report**: Confirm task: "Выбрана задача [issue_key] - [Название]."
+*   **Report**: Confirm task: "Task [issue_key] - [Name] selected."
 
 ### Step 3: Check Name & Propose Fixes
 *   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `issue_key` (fields: summary).
@@ -304,7 +304,7 @@ When the build is complete, notify user with:
 ### Step 4: Check Status/Assignee & Propose Updates
 *   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `issue_key` (fields: status, assignee).
 *   **Condition**: If status is 'In Progress' AND assignee is NOT `currentUser()`:
-    *   **Action**: Report **STOP** (Conflict: Задача уже в работе у другого). Stop process.
+    *   **Action**: Report **STOP** (Conflict: Task already in progress by another user). Stop process.
 *   **Condition**: If status is NOT 'In Progress':
     *   **Action**: Propose `jira_transition_issue` to 'In Progress'.
 *   **Condition**: If assignee is NOT `currentUser()`:
@@ -317,7 +317,7 @@ When the build is complete, notify user with:
     *   **Action**: Wait for approval.
 
 ### Step 6: Propose Git Branch Creation
-*   **Action**: Ask user: "Рекомендуется создать отдельную Git-ветку. Предложить команду? (`git checkout -b feature/[issue_key]`)"
+*   **Action**: Ask user: "It is recommended to create a separate Git branch. Suggest command? (`git checkout -b feature/[issue_key]`)"
 *   **Condition**: If user agrees:
     *   **Action**: Propose `run_terminal_cmd` with the git command.
     *   **Action**: Wait for approval.
@@ -329,12 +329,12 @@ When the build is complete, notify user with:
 *   **Report**: Inform user on progress of implementation.
 
 ### Step 8: Propose Git Commit/Merge
-*   **Action**: Ask user: "Реализация завершена? Предложить команды Git для коммита и слияния?"
+*   **Action**: Ask user: "Implementation complete? Suggest Git commands for commit and merge?"
 *   **Condition**: If user agrees:
     *   **Action**: Propose `run_terminal_cmd` for `git add .`
-    *   **Action**: Propose `run_terminal_cmd` for `git commit -m "feat([issue_key]): Описание изменений"` (запросить описание у пользователя).
-    *   **Action**: Propose `run_terminal_cmd` for `git push origin <branch_name>` (запросить имя ветки).
-    *   **Action**: Propose `run_terminal_cmd` for `git checkout main` (или develop).
+    *   **Action**: Propose `run_terminal_cmd` for `git commit -m "feat([issue_key]): Description of changes"` (request description from user).
+    *   **Action**: Propose `run_terminal_cmd` for `git push origin <branch_name>` (request branch name from user).
+    *   **Action**: Propose `run_terminal_cmd` for `git checkout main` (or develop).
     *   **Action**: Propose `run_terminal_cmd` for `git pull origin main`.
     *   **Action**: Propose `run_terminal_cmd` for `git merge --no-ff <branch_name>`.
     *   **Action**: Propose `run_terminal_cmd` for `git push origin main`.
@@ -344,9 +344,9 @@ When the build is complete, notify user with:
 
 ### Step 9: Suggest Next Mode (QA/REFLECT)
 *   **Action**: Update `tasks.md` (via proposed `edit_file`) to indicate implementation completion.
-*   **Reminder**: "Если реализация **затронула архитектуру** (например, добавлены новые компоненты, изменены потоки данных), не забудьте обновить `/docs/architecture.md`. Вы можете попросить меня помочь с этим."
-*   **Report**: "Реализация завершена. Рекомендуемый следующий шаг: Режим [QA/REFLECT]. Введите '[QA/REFLECT]' для перехода."
-*   *(Логика выбора QA или REFLECT может зависеть от процесса)*
+*   **Reminder**: "If the implementation **affected the architecture** (e.g., new components added, data flows changed), don't forget to update /docs/architecture.md. You can ask me to help with this."
+*   **Report**: "Implementation complete. Recommended next step: [QA/REFLECT] Mode. Enter '[QA/REFLECT]' to proceed."
+*   *(Logic for choosing QA or REFLECT may depend on the process)*
 
 ### Step 10: IMPLEMENT Mode End
 *   Wait for user command. 

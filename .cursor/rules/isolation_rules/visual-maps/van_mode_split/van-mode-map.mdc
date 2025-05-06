@@ -43,11 +43,11 @@ graph TD
 *   **Condition**: If a task status in Jira is 'Done' (or configured equivalent final status) but not in `tasks.md`:
     *   **Action**: Propose an `edit_file` operation on `tasks.md` to update the status for that task ID.
     *   **Action**: Wait for user approval of the `edit_file` operation.
-*   **Report**: Briefly report result (e.g., "Статусы синхронизированы." или "Предложены правки для tasks.md.").
+*   **Report**: Briefly report result (e.g., "Statuses synchronized." or "Edits proposed for tasks.md.").
 
 ### Step 2: Select Task for Initialization
 
-*   **Action**: Ask user: "У вас есть ID конкретной задачи для инициализации? Если да, сообщите. Иначе я поищу подходящие задачи (например, в статусе 'Backlog')."
+*   **Action**: Ask user: "Do you have a specific task ID for initialization? If yes, please provide it. Otherwise, I will search for suitable tasks (e.g., in 'Backlog' status)."
 *   **Condition**: If user provides an ID:
     *   Store the `issue_key`.
 *   **Condition**: If user does not provide ID:
@@ -56,20 +56,20 @@ graph TD
     *   **Action**: Ask user to select a task ID from the list.
     *   Store the selected `issue_key`.
 *   **Error Handling**: If no task ID is provided or selected, report error and stop.
-*   **Report**: Confirm selected task: "Выбрана задача [issue_key] - [Название]."
+*   **Report**: Confirm selected task: "Task [issue_key] - [Name] selected."
 
 ### Step 3: Determine Complexity
 
 *   **Action**: Load and follow the logic from `.cursor/rules/isolation_rules/Core/complexity-decision-tree.mdc` using the selected task's details (summary, description if available).
 *   **Action**: Record the determined Complexity Level (1-4) potentially in `activeContext.md` or as a variable.
-*   **Report**: Inform user: "Определен Уровень Сложности: [Level] - [Description]."
+*   **Report**: Inform user: "Complexity Level Determined: [Level] - [Description]."
 
 ### Step 4: Suggest Next Mode (PLAN/IMPLEMENT)
 
 *   **Condition**: Based on the determined Complexity Level:
     *   If Level 1: Suggest `IMPLEMENT` mode.
     *   If Level 2-4: Suggest `PLAN` mode.
-*   **Report**: "Рекомендуемый следующий шаг: Режим [PLAN/IMPLEMENT]. Введите '[PLAN/IMPLEMENT]' для перехода."
+*   **Report**: "Recommended next step: [PLAN/IMPLEMENT] Mode. Enter '[PLAN/IMPLEMENT]' to proceed."
 
 ### Step 5: Check/Create Architecture Document
 *   **Action**: Check if file `/docs/architecture.md` exists.
@@ -96,10 +96,10 @@ graph TD
         ## 6. Diagrams
         (Placeholder for Mermaid diagrams or links)
         ```
-    *   **Report**: "Файл /docs/architecture.md не найден. Предлагаю создать его с базовой структурой."
+    *   **Report**: "File /docs/architecture.md not found. Proposing to create it with a basic structure."
     *   **Action**: Wait for user approval of the `edit_file` operation.
 *   **Condition**: If file exists:
-    *   **Report**: "Файл /docs/architecture.md существует."
+    *   **Report**: "File /docs/architecture.md exists."
 
 ### Step 6: VAN Mode End
 *   Wait for user command to transition to the next mode. 

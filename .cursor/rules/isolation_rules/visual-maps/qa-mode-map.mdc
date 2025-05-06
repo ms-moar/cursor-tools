@@ -34,7 +34,7 @@ graph TD
     ValidationResults -->|"Yes"| SuccessReport["📝 GENERATE SUCCESS REPORT<br>All validations passed"]
 
     %% JIRA INTEGRATION START
-    SuccessReport --> UpdateJiraStatus["📚 Update Jira Status to 'В работе'"]
+    SuccessReport --> UpdateJiraStatus["📚 Update Jira Status to 'In Progress'"]
     UpdateJiraStatus --> SuggestBuild["🚦 Suggest BUILD/IMPLEMENT Mode"]
     %% JIRA INTEGRATION END
 
@@ -507,7 +507,7 @@ This enhanced QA mode serves as a "quality guardian" throughout the development 
 
 - **Configuration Reading**:
     - **Action**: Read the `integration_config.md` file to get Jira configuration.
-    - **Data**: Extract `Project Key` and Jira status for VAN QA phase (e.g., `В работе`).
+    - **Data**: Extract `Project Key` and Jira status for VAN QA phase (e.g., `In Progress`).
 
 - **Generate Report**: Create either a success or failure report based on the validation outcome.
 - **If Successful**: ✅
@@ -516,7 +516,7 @@ This enhanced QA mode serves as a "quality guardian" throughout the development 
         - **Action**: Call `mcp_mcp-atlassian_jira_update_issue`.
         - **Parameters**:
             - `issue_key`: The Jira ID retrieved from `tasks.md`.
-            - `fields`: `'{"status": {"name": "$STATUS_NAME"}}'` where `$STATUS_NAME` is from the configuration (e.g., "В работе").
+            - `fields`: `'{"status": {"name": "$STATUS_NAME"}}'` where `$STATUS_NAME` is from the configuration (e.g., "In Progress").
             - *Note: May require `transition_issue` if direct update fails*.
         - **Error Handling**: Retry once on MCP failure, then report and ask user.
     - **Transition**: Signal successful validation and suggest switching to BUILD/IMPLEMENT mode.

@@ -1,85 +1,85 @@
-# Журнал Изменений (Интеграция Jira/Confluence)
+# Changelog (Jira/Confluence Integration)
 
-Этот документ описывает основные изменения, внесенные в форк проекта `cursor-memory-bank` для реализации интеграции с Jira и Confluence с использованием инструментов MCP и гибкой конфигурации.
+This document describes the main changes made to the `cursor-memory-bank` project fork to implement Jira and Confluence integration using MCP tools and flexible configuration.
 
-## Новые файлы
+## New Files
 
 *   **`integration_config.md`**:
-    *   Создан для централизованного хранения настроек интеграции.
-    *   Содержит заглушки для ключа проекта Jira (`YOUR_JIRA_PROJECT_KEY`) и ключа пространства Confluence (`YOUR_CONFLUENCE_SPACE_KEY`).
-    *   Включает тип задачи Jira по умолчанию (`Story`).
-    *   Содержит сопоставление статусов Jira для каждого режима работы системы (PLAN, CREATIVE, VAN QA, IMPLEMENT, REFLECT, ARCHIVE).
-    *   Включает инструкцию по настройке для пользователя.
+    *   Created for centralized storage of integration settings.
+    *   Contains placeholders for the Jira project key (`YOUR_JIRA_PROJECT_KEY`) and Confluence space key (`YOUR_CONFLUENCE_SPACE_KEY`).
+    *   Includes the default Jira issue type (`Story`).
+    *   Contains Jira status mapping for each system operation mode (PLAN, CREATIVE, VAN QA, IMPLEMENT, REFLECT, ARCHIVE).
+    *   Includes setup instructions for the user.
 
-## Измененные файлы
+## Changed Files
 
 *   **`.cursor/rules/isolation_rules/visual-maps/plan-mode-map.mdc`**:
-    *   Добавлен шаг чтения настроек из `integration_config.md`.
-    *   Добавлена логика запроса у пользователя **существующих** компонентов и меток Jira.
-    *   Добавлена полуавтономная логика работы с Эпиками:
-        *   Запрос у пользователя, связана ли задача с Эпиком.
-        *   Поиск существующих Эпиков по ключевым словам с помощью `mcp_mcp-atlassian_jira_search`.
-        *   Предложение пользователю выбрать существующий Эпик, пропустить или создать новый.
-        *   Создание нового Эпика при необходимости с помощью `mcp_mcp-atlassian_jira_create_issue`.
-    *   Добавлен вызов `mcp_mcp-atlassian_jira_create_issue` для создания задачи (Story) с использованием данных из конфига, пользовательского ввода (компоненты, метки) и определенной связи с Эпиком.
-    *   Добавлена логика записи полученного ID задачи Jira в файл `tasks.md` (в формате `[Jira: KEY-123]`).
-    *   Добавлены примечания по обработке ошибок MCP (повторная попытка).
+    *   Added a step to read settings from `integration_config.md`.
+    *   Added logic to request **existing** Jira components and labels from the user.
+    *   Added semi-autonomous logic for working with Epics:
+        *   Request from the user if the task is related to an Epic.
+        *   Search for existing Epics by keywords using `mcp_mcp-atlassian_jira_search`.
+        *   Offer the user to select an existing Epic, skip, or create a new one.
+        *   Create a new Epic if necessary using `mcp_mcp-atlassian_jira_create_issue`.
+    *   Added a call to `mcp_mcp-atlassian_jira_create_issue` to create a task (Story) using data from the config, user input (components, labels), and the defined Epic link.
+    *   Added logic to write the received Jira issue ID to the `tasks.md` file (in the format `[Jira: KEY-123]`).
+    *   Added notes on MCP error handling (retry).
 
 *   **`.cursor/rules/isolation_rules/visual-maps/creative-mode-map.mdc`**:
-    *   Добавлен шаг чтения настроек из `integration_config.md` (статус Jira, ключ пространства Confluence).
-    *   Добавлена логика чтения ID задачи Jira из `tasks.md`.
-    *   Добавлен вызов `mcp_mcp-atlassian_jira_update_issue` для обновления статуса задачи Jira в соответствии с настройками.
-    *   Добавлен вызов `mcp_mcp-atlassian_confluence_create_page` для создания страницы с дизайн-документацией в настроенном пространстве Confluence.
-    *   Добавлены примечания по обработке ошибок MCP.
+    *   Added a step to read settings from `integration_config.md` (Jira status, Confluence space key).
+    *   Added logic to read the Jira issue ID from `tasks.md`.
+    *   Added a call to `mcp_mcp-atlassian_jira_update_issue` to update the Jira issue status according to settings.
+    *   Added a call to `mcp_mcp-atlassian_confluence_create_page` to create a design documentation page in the configured Confluence space.
+    *   Added notes on MCP error handling.
 
 *   **`.cursor/rules/isolation_rules/visual-maps/qa-mode-map.mdc`**:
-    *   Добавлен шаг чтения настроек из `integration_config.md` (статус Jira для успешной QA).
-    *   Добавлена логика чтения ID задачи Jira из `tasks.md`.
-    *   Добавлен вызов `mcp_mcp-atlassian_jira_update_issue` для обновления статуса задачи Jira при успешной валидации.
-    *   Добавлены примечания по обработке ошибок MCP.
+    *   Added a step to read settings from `integration_config.md` (Jira status for successful QA).
+    *   Added logic to read the Jira issue ID from `tasks.md`.
+    *   Added a call to `mcp_mcp-atlassian_jira_update_issue` to update the Jira issue status upon successful validation.
+    *   Added notes on MCP error handling.
 
 *   **`.cursor/rules/isolation_rules/visual-maps/reflect-mode-map.mdc`**:
-    *   Добавлен шаг чтения настроек из `integration_config.md` (статус Jira для завершения рефлексии).
-    *   Добавлена логика чтения ID задачи Jira из `tasks.md`.
-    *   Добавлен вызов `mcp_mcp-atlassian_jira_update_issue` для обновления статуса задачи Jira.
-    *   Добавлены примечания по обработке ошибок MCP.
+    *   Added a step to read settings from `integration_config.md` (Jira status for reflection completion).
+    *   Added logic to read the Jira issue ID from `tasks.md`.
+    *   Added a call to `mcp_mcp-atlassian_jira_update_issue` to update the Jira issue status.
+    *   Added notes on MCP error handling.
 
 *   **`.cursor/rules/isolation_rules/visual-maps/archive-mode-map.mdc`**:
-    *   Добавлен шаг чтения настроек из `integration_config.md` (ключ пространства Confluence).
-    *   Добавлена логика проверки/создания директории `docs/archive/`.
-    *   Добавлена логика создания локального файла-сводки в `docs/archive/` с использованием ID задачи Jira.
-    *   Добавлен вызов `mcp_mcp-atlassian_confluence_create_page` для создания/обновления страницы-сводки в настроенном пространстве Confluence.
-    *   Обновлен проверочный список и финальное сообщение для отражения создания локального файла и страницы Confluence.
-    *   Добавлены примечания по обработке ошибок MCP.
+    *   Added a step to read settings from `integration_config.md` (Confluence space key).
+    *   Added logic to check/create the `docs/archive/` directory.
+    *   Added logic to create a local summary file in `docs/archive/` using the Jira issue ID.
+    *   Added a call to `mcp_mcp-atlassian_confluence_create_page` to create/update a summary page in the configured Confluence space.
+    *   Updated checklist and final message to reflect the creation of the local file and Confluence page.
+    *   Added notes on MCP error handling.
 
-## Важные замечания
+## Important Notes
 
-*   Перед использованием системы необходимо **настроить** файл `integration_config.md`, указав реальные ключи Jira и Confluence.
-*   Для корректной работы шага сохранения локальной документации в режиме `ARCHIVE` убедитесь, что папка `docs/` существует в корне проекта или будет создана.
-*   Были проблемы с сохранением изменений в `plan-mode-map.mdc`, была предпринята попытка повторного применения изменений. Рекомендуется проверить этот файл. 
+*   Before using the system, you **must configure** the `integration_config.md` file, specifying the actual Jira and Confluence keys.
+*   For the local documentation saving step in `ARCHIVE` mode to work correctly, ensure that the `docs/` folder exists at the project root or will be created.
+*   There were issues saving changes to `plan-mode-map.mdc`; an attempt was made to reapply the changes. It is recommended to check this file.
 
 ---
 
-## Обновления Логики Интеграции и Рабочего Процесса (Сессия от [Дата или Идентификатор])
+## Integration Logic and Workflow Updates (Session from [Date or Identifier])
 
-В ходе итеративной доработки были внесены следующие изменения в инструкции пользовательских режимов (`custom_modes/*.md`) для улучшения интеграции с Jira и Git:
+During iterative development, the following changes were made to the custom mode instructions (`custom_modes/*.md`) to improve Jira and Git integration:
 
-*   **Переход к полуавтоматической интеграции с Jira:**
-    *   Вместо ручных проверок и обновлений статусов/исполнителей в Jira пользователем, система теперь использует инструменты MCP (`mcp_mcp-atlassian_jira_*`) для:
-        *   Автоматической проверки статусов завершенных задач в Jira и предложения правок для `tasks.md` при расхождениях.
-        *   Автоматической проверки названий задач в Jira и предложения правок для `tasks.md` при расхождениях.
-        *   Предложения конкретных действий в Jira (смена статуса, назначение) в ключевых точках процесса (конец `PLAN`, начало `CREATIVE`, начало `IMPLEMENT`).
-    *   Действия в Jira и правки `tasks.md` выполняются автоматически **только после одобрения** пользователем соответствующего предложения в интерфейсе Cursor.
-*   **Проактивный выбор задач:**
-    *   В начале режимов `VAN`, `PLAN`, `CREATIVE`, `IMPLEMENT` система теперь может сама (используя поиск MCP в Jira) **предложить пользователю список задач**, подходящих для текущего этапа, вместо того чтобы всегда ждать ID от пользователя.
-*   **Улучшенная синхронизация статусов:**
-    *   После успешного автоматического изменения статуса/исполнителя задачи в Jira, система сразу **предлагает правку** для `tasks.md`, чтобы обновить локальный статус задачи.
-*   **Отслеживание Эпиков:**
-    *   В режиме `PLAN` добавлена логика автоматической проверки связи задачи с Эпиком в Jira и **предложения правки** для `tasks.md` для фиксации этой связи (например, в колонке 'Epic').
-*   **Проверка текущих задач:**
-    *   В начале режима `PLAN` добавлена проверка наличия задач в Jira, уже находящихся в статусе "В разработке" / "To Do" и назначенных на пользователя. Система предложит продолжить работу над ними перед планированием новых.
-*   **Интеграция с Git:**
-    *   В инструкции режимов `CREATIVE` и `IMPLEMENT` добавлены явные шаги с **предложением создать/проверить наличие Git-ветки** для текущей задачи.
-    *   В конец инструкций режима `IMPLEMENT` добавлен подробный блок с **предложением выполнить коммит, пуш и слияние ветки** (или создание Pull Request).
+*   **Transition to semi-automatic Jira integration:**
+    *   Instead of manual checks and updates of statuses/assignees in Jira by the user, the system now uses MCP tools (`mcp_mcp-atlassian_jira_*`) to:
+        *   Automatically check the statuses of completed tasks in Jira and suggest edits for `tasks.md` in case of discrepancies.
+        *   Automatically check task names in Jira and suggest edits for `tasks.md` in case of discrepancies.
+        *   Suggest specific actions in Jira (change status, assign) at key points in the process (end of `PLAN`, beginning of `CREATIVE`, beginning of `IMPLEMENT`).
+    *   Actions in Jira and edits to `tasks.md` are performed automatically **only after user approval** of the corresponding suggestion in the Cursor interface.
+*   **Proactive task selection:**
+    *   At the beginning of `VAN`, `PLAN`, `CREATIVE`, `IMPLEMENT` modes, the system can now (using MCP search in Jira) **suggest a list of tasks** suitable for the current stage, instead of always waiting for an ID from the user.
+*   **Improved status synchronization:**
+    *   After successfully automatically changing the status/assignee of a task in Jira, the system immediately **suggests an edit** for `tasks.md` to update the local task status.
+*   **Epic tracking:**
+    *   In `PLAN` mode, logic has been added to automatically check the task's link to an Epic in Jira and **suggest an edit** for `tasks.md` to record this link (e.g., in an 'Epic' column).
+*   **Checking current tasks:**
+    *   At the beginning of `PLAN` mode, a check has been added for tasks in Jira already in "In Progress" / "To Do" status and assigned to the user. The system will suggest continuing work on them before planning new ones.
+*   **Git integration:**
+    *   Explicit steps have been added to the `CREATIVE` and `IMPLEMENT` mode instructions with a **suggestion to create/check for a Git branch** for the current task.
+    *   A detailed block has been added to the end of the `IMPLEMENT` mode instructions with a **suggestion to commit, push, and merge the branch** (or create a Pull Request).
 
-Эти изменения направлены на снижение ручной работы по синхронизации, повышение прозрачности и улучшение интеграции рабочего процесса в Cursor с Jira и Git. 
+These changes are aimed at reducing manual synchronization efforts, increasing transparency, and improving the integration of the Cursor workflow with Jira and Git. 

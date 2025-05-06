@@ -3,7 +3,6 @@ description: main rule
 globs: main.mdc
 alwaysApply: false
 ---
-
 # 🔍 ISOLATION-FOCUSED MEMORY BANK SYSTEM
 
 > **TL;DR:** This system is designed to work with Cursor custom modes, where each mode loads only the rules it needs. The system uses visual Mermaid diagrams and selective document loading to optimize context usage.
@@ -120,4 +119,13 @@ grep "TODO" $(find . -name "*.js")
 npm install && npm start
 ```
 
-Refer to [command-execution.md](mdc:Core/command-execution.md) for detailed guidance. 
+Refer to [command-execution.md](mdc:Core/command-execution.md) for detailed guidance.
+
+## 🔒 MANDATORY SECURITY RULES
+
+When working with files in the project, the following rules must be observed:
+
+1. Before deleting any file for any reason, its backup copy must be created in the `backup-files/` folder.
+2. If the `backup-files/` directory is missing, it must be created automatically.
+
+3. Backup file name format: `{original_filename}_{timestamp}.bak` 

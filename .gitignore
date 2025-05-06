@@ -73,3 +73,9 @@ pids
 
 # SpecStory history
 .specstory/ 
+# SpecStory explanation file
+.specstory/.what-is-this.md
+
+# Backup files
+backup-files/*
+!backup-files/.gitkeep
