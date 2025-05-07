@@ -64,7 +64,13 @@ graph TD
     UpdateConfluence --> UpdateActive[\"Update<br>activeContext.md\"]
     %% LOCAL DOCS & CONFLUENCE INTEGRATION END
 
-    UpdateActive --> Reset[\"Reset for<br>Next Task\"]
+    %% DEVOPS INTEGRATION START
+    UpdateActive --> GitLabTag[\"Create Release<br>Tag in GitLab\"]
+    GitLabTag --> VercelCheck[\"Check Vercel<br>Deployment (Optional)\"]
+    VercelCheck --> Reset[\"Reset for<br>Next Task\"]
+    %% DEVOPS INTEGRATION END
+
+    %% Previously: UpdateActive --> Reset[\"Reset for<br>Next Task\"]
 
     %% Node Styles
     style CreateArchive fill:#87CEEB,stroke:#4682B4,color:black
@@ -72,6 +78,8 @@ graph TD
     style WriteLocalDoc fill:#90EE90,stroke:#3CB371,color:black
     style UpdateConfluence fill:#2dce89,stroke:#24a46d,color:white
     style UpdateActive fill:#FFD700,stroke:#B8860B,color:black
+    style GitLabTag fill:#6f42c1,stroke:#5a32a3,color:white
+    style VercelCheck fill:#ee5253,stroke:#c0392b,color:white
     style Reset fill:#FFA07A,stroke:#CD5C5C,color:black
 ```
 
@@ -272,21 +280,15 @@ When archiving is complete, update tasks.md with:
 - progress.md updated with archive reference? [YES/NO]
 - activeContext.md updated for next task? [YES/NO]
 - Creative phase documents archived (Level 3-4)? [YES/NO/NA]
+- **Release tag created in GitLab? [YES/NO]**
+- **Vercel deployment verified (if applicable)? [YES/NO/NA]**
 
 → If all YES: Archiving complete - Memory Bank reset for next task
 → If any NO: Complete missing archive elements
 ```
 
-## 🔄 TASK COMPLETION NOTIFICATION
+## 📋 TASK COMPLETION NOTIFICATION
 
-Before the final notification, add steps for local docs and Confluence:
-
-- **Verify/Create Local Directory**:
-    - **Action**: Check if `docs/archive/` exists. If not, create it using appropriate terminal commands.
-- **Write Local Summary**: 
-    - **Action**: Read the generated archive summary (from the process leading to `CreateArchive`).
-    - **Action**: Create a new file in `docs/archive/` named like `$PROJECT_KEY-XXX_summary_YYYYMMDD.md` (using Jira ID and date).
-    - **Action**: Write the summary content to this new file.
 - **Update Confluence Page**:
     - **Configuration Reading**:
         - **Action**: Read the `integration_config.md` file to get Confluence configuration.
@@ -300,6 +302,23 @@ Before the final notification, add steps for local docs and Confluence:
         - `parent_id`: (Optional)
     - **Error Handling**: If MCP call fails, report error, try again once. If it fails again, report error and ask user how to proceed.
 
+- **Create GitLab Release Tag**:
+    - **Action**: Ask user: "Now that the task is archived, we should create a release tag in GitLab. Would you like to use a specific version for this tag? Default format is v1.x.x."
+    - **Action**: Based on user response, propose appropriate `run_terminal_cmd` for:
+        - `python devops-tools/gitlab/gitlab_tools.py create-tag --name v1.X.Y --message "Task $PROJECT_KEY-XXX completed: Brief description"`
+    - **Action**: Wait for approval and check output for success/failure indication.
+    - **Error Handling**: If tag creation fails, report the error and ask if to try again or skip.
+
+- **Verify Vercel Deployment (Optional)**:
+    - **Action**: Ask user: "Do you use Vercel for deployments? Would you like to verify the production deployment is up to date?"
+    - **Condition**: If user agrees:
+        - **Action**: Propose `run_terminal_cmd` command: `python devops-tools/vercel/vercel_tools.py status --prod`
+        - **Action**: Wait for approval.
+        - **Action**: Based on result, ask: "Do you want to trigger a new production deployment on Vercel?"
+        - **Condition**: If user agrees:
+            - **Action**: Propose `run_terminal_cmd` command: `python devops-tools/vercel/vercel_tools.py deploy --prod`
+            - **Action**: Wait for approval and check output.
+
 Then show the final notification:
 
 ```
@@ -308,6 +327,8 @@ Then show the final notification:
 ✅ Archive document created in docs/archive/
 ✅ Local summary file saved in docs/archive/
 ✅ Confluence page created/updated in configured space
+✅ Release tag created in GitLab repository
+✅ Vercel deployment verified (if applicable)
 ✅ All task documentation preserved
 ✅ Memory Bank updated with references
 ✅ Task marked as COMPLETED in tasks.md
@@ -316,5 +337,4 @@ Then show the final notification:
 → To start a new task, use VAN MODE
 ```
 
-
-*Note for AI: Remember the MCP error handling rules (retry once) and deletion of temporary files if they were used.* 
+*Note for AI: Remember the MCP error handling rules (retry once) and deletion of temporary files if they were used.*

@@ -228,17 +228,51 @@ graph TD
     DepCheck --> ConfigCheck["2️⃣ Configuration<br>Validation"]
     ConfigCheck --> EnvCheck["3️⃣ Environment<br>Validation"]
     EnvCheck --> MinBuildCheck["4️⃣ Minimal Build<br>Test"]
+    MinBuildCheck --> DevOpsCheck["5️⃣ DevOps Pipeline<br>Validation"]
     
-    MinBuildCheck --> IMPLEMENTConsistency{"Technical<br>Prerequisites Met?"}
+    DevOpsCheck --> IMPLEMENTConsistency{"Technical<br>Prerequisites Met?"}
     IMPLEMENTConsistency -->|"Yes"| PassIMPLEMENT["✅ IMPLEMENT Phase<br>Validation Passed"]
     IMPLEMENTConsistency -->|"No"| FailIMPLEMENT["❌ IMPLEMENT Phase<br>Issues Found"]
     
     style IMPLEMENT fill:#4da6ff,stroke:#0066cc,color:white
     style FourChecks fill:#f6546a,stroke:#c30052,color:white
+    style DevOpsCheck fill:#6f42c1,stroke:#5a32a3,color:white
     style IMPLEMENTConsistency fill:#f6546a,stroke:#c30052,color:white
     style PassIMPLEMENT fill:#10b981,stroke:#059669,color:white
     style FailIMPLEMENT fill:#ff5555,stroke:#dd3333,color:white
 ```
+
+## 💻 5️⃣ DEVOPS PIPELINE VALIDATION PROCESS
+
+This validation point tests the integration with GitLab CI/CD pipeline and optionally with Vercel deployment.
+
+### Command Execution:
+
+```bash
+# Check GitLab CI configuration
+test -f .gitlab-ci.yml && echo "✅ GitLab CI config found" || echo "❌ GitLab CI config missing"
+
+# Validate GitLab CI configuration syntax
+python devops-tools/gitlab/gitlab_tools.py validate-ci-config .gitlab-ci.yml
+
+# Check last pipeline status
+python devops-tools/gitlab/gitlab_tools.py check-pipeline main
+
+# Optional: Validate Vercel configuration
+test -f vercel.json && echo "✅ Vercel config found" || echo "⚠️ Vercel config not found (optional)"
+```
+
+### Validation Criteria:
+- GitLab CI configuration must exist and be syntactically valid
+- Last CI pipeline for the main branch should be successful
+- If Vercel is used, configuration should be valid
+- Project structure should match CI/CD expectations
+
+### Common Fixes:
+- Fix GitLab CI configuration syntax errors
+- Address failed pipeline steps
+- Update project structure to match CI/CD requirements
+- Configure Vercel properly if deployment is needed
 
 ## 📋 UNIVERSAL VALIDATION COMMAND EXECUTION
 
@@ -432,6 +466,16 @@ grep -i "script.*src=" index.html
 │                                                                               │
 │ [Technical validation section shown only for IMPLEMENT phase]                  │
 │                                                                               │
+│ 4️⃣ MINIMAL BUILD TEST                                                          │
+│    ✓ Build Process: [Status]                                                  │
+│    ✓ Entry Points: [Status]                                                   │
+│    ✓ HTML References: [Status]                                                │
+│                                                                               │
+│ 5️⃣ DEVOPS PIPELINE VALIDATION                                                 │
+│    ✓ GitLab CI Config: [Status]                                               │
+│    ✓ Pipeline Status: [Status]                                                │
+│    ✓ Vercel Configuration: [Status] (if applicable)                           │
+│                                                                               │
 │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━ OVERALL STATUS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
 │                                                                               │
 │ ✅ VALIDATION PASSED - Project quality verified for current phase              │
@@ -466,6 +510,10 @@ If validation fails, a detailed failure report is generated:
 │ ❌ [PHASE]-SPECIFIC ISSUES                                                      │
 │    • [Specific issue details]                                                   │
 │    • [Specific issue details]                                                   │
+│                                                                                 │
+│ ❌ DEVOPS PIPELINE ISSUES                                                       │
+│    • [Specific issue details with GitLab CI pipeline]                           │
+│    • [Specific issue details with Vercel configuration (if applicable)]         │
 │                                                                                 │
 │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━ REQUIRED FIXES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
 │                                                                                 │
@@ -502,6 +550,28 @@ graph TD
 This enhanced QA mode serves as a "quality guardian" throughout the development process, ensuring documentation is consistently maintained and all phase requirements are met before proceeding to the next phase. 
 
 ## 🧪 QA VALIDATION STEPS
+
+### Step 1: Detect Current Phase and Prepare
+- **Action**: Analyze files to determine current project phase.
+- **Action**: Load appropriate validation checklist based on phase.
+
+### Step 2: Perform Universal Checks
+- **Action**: Verify Memory Bank file consistency.
+- **Action**: Validate task tracking in tasks.md.
+- **Action**: Check cross-references between documents.
+
+### Step 3: Execute Phase-Specific Validation
+- **Action**: Run validation steps specific to the detected phase.
+- **Action**: For IMPLEMENT phase, perform technical validation including dependency, configuration, environment, and build checks.
+- **Action**: For IMPLEMENT phase, execute GitLab CI/CD pipeline validation:
+  - **Action**: Check for existence and validity of GitLab CI configuration.
+  - **Action**: Validate CI/CD pipeline status using `python devops-tools/gitlab/gitlab_tools.py`.
+  - **Action**: Optional: Check Vercel configuration if user confirms Vercel is used for deployments.
+
+### Step 4: Compile Results and Generate Report
+- **Action**: Compile all validation results into a comprehensive report.
+- **Action**: Format report with clear pass/fail indicators for each check.
+- **Action**: Include specific error details and fix suggestions for any failures.
 
 ### Step 5: Report Results and Prepare for Transition
 

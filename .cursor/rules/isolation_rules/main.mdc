@@ -127,6 +127,27 @@ When working with files in the project, the following rules must be observed:
 
 1. Before deleting any file for any reason, its backup copy must be created in the `backup-files/` folder.
 2. If the `backup-files/` directory is missing, it must be created automatically.
+3. Backup file name format: `{original_filename}_{timestamp}.bak`
 
+## 📝 AI COMMUNICATION PROTOCOL
 
-3. Backup file name format: `{original_filename}_{timestamp}.bak` 
+Every response from the AI assistant MUST begin with project identification in the following format:
+
+```
+**📂 Проект: cursor-memory-bank | Папка: [Current Working Directory]**
+```
+
+Where:
+- `[Current Working Directory]` is the absolute path to the workspace retrieved from shell or environment.
+- This header MUST appear at the very beginning of each message.
+- This header MUST be formatted in bold with the folder emoji (📂).
+- This header MUST be separated from the main content by a blank line.
+
+Example:
+```
+**📂 Проект: cursor-memory-bank | Папка: C:/Users/Username/cursor-memory-bank**
+
+[Main message content begins here...]
+```
+
+This helps maintain context awareness during complex multi-step operations and ensures clarity about which project and location the AI is currently working with. 

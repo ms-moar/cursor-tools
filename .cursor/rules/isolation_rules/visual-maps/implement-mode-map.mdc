@@ -341,6 +341,19 @@ When the build is complete, notify user with:
     *   **Instruction**: Remind user about resolving potential merge conflicts.
     *   **Instruction**: Mention creating a Pull Request as an alternative.
 *   **Action**: Wait for user approval for each proposed command.
+*   **----> NEW: Check GitLab Pipeline <----**
+*   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/gitlab/gitlab_tools.py check-pipeline main` (script to check the latest pipeline for the branch).
+*   **Action**: Wait for approval and check output for success/failure indication.
+*   **----> NEW: Check Vercel Deployment (Conditional) <----**
+*   **Condition**: If GitLab pipeline check was successful (needs ability to parse previous command's output or user confirmation):
+    *   **Action**: Ask user: "Do you use Vercel for deployments? Would you like to check the status of the latest Vercel production deployment?"
+    *   **Condition**: If user agrees:
+        *   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/vercel/vercel_tools.py status --prod`
+        *   **Action**: Wait for approval.
+    *   **Action**: (Optional) Ask user: "Would you like to initiate a new production deployment on Vercel?"
+    *   **Condition**: If user agrees:
+        *   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/vercel/vercel_tools.py deploy --prod`
+        *   **Action**: Wait for approval.
 
 ### Step 9: Suggest Next Mode (QA/REFLECT)
 *   **Action**: Update `tasks.md` (via proposed `edit_file`) to indicate implementation completion.
