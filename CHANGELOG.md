@@ -66,20 +66,35 @@ During iterative development, the following changes were made to the custom mode
 
 *   **Transition to semi-automatic Jira integration:**
     *   Instead of manual checks and updates of statuses/assignees in Jira by the user, the system now uses MCP tools (`mcp_mcp-atlassian_jira_*`) to:
-        *   Automatically check the statuses of completed tasks in Jira and suggest edits for `tasks.md` in case of discrepancies.
-        *   Automatically check task names in Jira and suggest edits for `tasks.md` in case of discrepancies.
-        *   Suggest specific actions in Jira (change status, assign) at key points in the process (end of `PLAN`, beginning of `CREATIVE`, beginning of `IMPLEMENT`).
-    *   Actions in Jira and edits to `tasks.md` are performed automatically **only after user approval** of the corresponding suggestion in the Cursor interface.
-*   **Proactive task selection:**
-    *   At the beginning of `VAN`, `PLAN`, `CREATIVE`, `IMPLEMENT` modes, the system can now (using MCP search in Jira) **suggest a list of tasks** suitable for the current stage, instead of always waiting for an ID from the user.
-*   **Improved status synchronization:**
-    *   After successfully automatically changing the status/assignee of a task in Jira, the system immediately **suggests an edit** for `tasks.md` to update the local task status.
-*   **Epic tracking:**
-    *   In `PLAN` mode, logic has been added to automatically check the task's link to an Epic in Jira and **suggest an edit** for `tasks.md` to record this link (e.g., in an 'Epic' column).
-*   **Checking current tasks:**
-    *   At the beginning of `PLAN` mode, a check has been added for tasks in Jira already in "In Progress" / "To Do" status and assigned to the user. The system will suggest continuing work on them before planning new ones.
-*   **Git integration:**
-    *   Explicit steps have been added to the `CREATIVE` and `IMPLEMENT` mode instructions with a **suggestion to create/check for a Git branch** for the current task.
-    *   A detailed block has been added to the end of the `IMPLEMENT` mode instructions with a **suggestion to commit, push, and merge the branch** (or create a Pull Request).
+        *   Check the status of tasks in Jira and synchronize them with `tasks.md`.
+        *   Update task status in Jira at key transition points.
+        *   Track assignees and, if necessary, suggest changes (e.g., when taking tasks from others).
+    *   Added default mapping from internal Memory Bank modes/phases to Jira statuses.
+*   **Direct Confluence integration:**
+    *   When archiving a task, the system now creates a summary document both locally and in the configured Confluence space.
+*   **Improved task tracking in `tasks.md`:**
+    *   Added a requirement to include Jira issue keys for all tasks.
+    *   Added functionality to update the file when tasks change status in Jira.
 
-These changes are aimed at reducing manual synchronization efforts, increasing transparency, and improving the integration of the Cursor workflow with Jira and Git. 
+## DevOps Integration (Session from [Current Date])
+
+A new `devops-tools` folder has been added to the project with tools to support continuous integration and deployment:
+
+*   **GitLab CI/CD Integration:**
+    *   Added automatic GitLab pipeline status checking in the IMPLEMENT and QA modes.
+    *   Integrated GitLab tagging into the ARCHIVE mode for marking completed tasks.
+    *   Added validation of GitLab CI/CD configuration in QA mode.
+    *   Mode maps updated to include GitLab commands and validation steps.
+
+*   **Vercel Deployment (Optional):**
+    *   Added optional integration with Vercel for deployment verification and triggering.
+    *   Updated QA mode to check Vercel configuration when applicable.
+    *   Added user verification step to confirm if Vercel is used in the project.
+
+*   **Configuration Updates:**
+    *   Enhanced `integration_config.md` with GitLab and Vercel configuration sections.
+    *   Updated instructions to include the setup of DevOps tools.
+
+*   **Automatic Backup Before Deletion:**
+    *   Added a mandatory rule in Cursor's base rule to automatically create backups of files before deleting them.
+    *   The backup system uses the dedicated `backup-files/` folder with timestamped copies. 

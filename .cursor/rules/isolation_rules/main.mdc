@@ -128,4 +128,5 @@ When working with files in the project, the following rules must be observed:
 1. Before deleting any file for any reason, its backup copy must be created in the `backup-files/` folder.
 2. If the `backup-files/` directory is missing, it must be created automatically.
 
+
 3. Backup file name format: `{original_filename}_{timestamp}.bak` 
