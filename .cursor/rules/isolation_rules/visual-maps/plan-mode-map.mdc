@@ -6,94 +6,108 @@ alwaysApply: false
 # PLAN MODE: LLM-Powered Planning Workflow
 
 ## OVERVIEW
-This mode uses the AI's Large Language Model (LLM) capabilities to analyze the project goal and context, then propose a high-level plan structured into Epics, Sprints, and Tasks, including definitive Story Point (SP) estimations. The output is a plan for review and subsequent Jira issue creation.
+This mode uses the AI's Large Language Model (LLM) capabilities to analyze the project goal and context, then propose a high-level plan structured into Epics, Sprints, and Tasks, including definitive Story Point (SP) estimations. The output is a plan for review, subsequent Jira issue creation based on a user-selected Project Context, and updating the local `tasks.md` file.
 
 ## WORKFLOW
 
 ```mermaid
 graph TD
-    Start["PLAN Mode Start"] --> AutoSync["Step 1: Auto-Sync Completed Tasks (Optional)"]
-    AutoSync --> ReadContext["Step 2: Read Project Context"]
-    ReadContext --> IdentifyGoal["Step 3: Identify Planning Goal"]
+    Start["PLAN Mode Start"] --> AutoSync["Step 1: Auto-Sync Tasks (Jira & tasks.md)"]
+    AutoSync --> ReadGlobalContext["Step 2: Read Global Project Context & Configs"]
+    ReadGlobalContext --> SelectActiveContext["Step 2.1: Select Active Project Context"]
+    SelectActiveContext --> IdentifyGoal["Step 3: Identify Planning Goal (for selected context)"]
     IdentifyGoal --> GeneratePlanWithSP["Step 4: Generate Epic/Sprint/Task Plan with Final SP (LLM Task)"]
     GeneratePlanWithSP --> OutputPlan["Step 5: Output Generated Plan with Final SP"]
-    OutputPlan --> JiraSync["Step 5.1: Process Epics & Tasks for Jira Creation with SP in Description"]
-    JiraSync --> End["PLAN Mode End"]
+    OutputPlan --> JiraSync["Step 5.1: Process Epics & Tasks for Jira Creation (using selected context)"]
+    JiraSync --> UpdateTasksMD["Step 5.2: Update Local tasks.md File"]
+    UpdateTasksMD --> End["PLAN Mode End"]
 ```
 
 ## DETAILED STEPS
 
-### Step 1: Auto-Sync Completed Tasks (Optional Check)
-*   **(Optional) Action**: Perform the automatic check for tasks completed in Jira but not updated locally (if a local task representation is used), proposing `edit_file` if needed.
+### Step 1: Auto-Sync Tasks (Jira & tasks.md)
+*   **(Optional) Action**: Read `tasks.md` line by line.
+    *   For each line, parse `JIRA_PROJECT_KEY`, `JIRA_ISSUE_ID`, and current local status.
+    *   Find the corresponding `Project Context` in `integration_config.md` using `JIRA_PROJECT_KEY`.
+    *   Call `mcp_mcp-atlassian_jira_get_issue` for `JIRA_ISSUE_ID` in its specific project to get its current status in Jira.
+    *   Compare Jira status with local status. If different and Jira status is a "completed" one (e.g., matches `ARCHIVE` or `REFLECT` status in the context's `jira_status_mapping`), propose `edit_file` for `tasks.md` to update the status for that line.
+*   **Report**: Briefly report sync results.
 
-### Step 2: Read Project Context
-*   **Action**: Read relevant context files (e.g., `projectbrief.md`, `activeContext.md`, `integration_config.md` for SP formula) and user's initial request for planning.
+### Step 2: Read Global Project Context & Configs
+*   **Action**: Read relevant general context files (e.g., `projectbrief.md` if global, user's initial request for planning).
+*   **Action**: Read `integration_config.md` to get the list of all `Project Contexts` and global settings (like SP formula and `tasks.md` format info).
 
-### Step 3: Identify Planning Goal
-*   **Action**: Based on the context, clearly state the main goal or feature. Ask for clarification if unclear.
-*   **Report**: "Planning Goal: [Formulated Goal]."
+### Step 2.1: Select Active Project Context
+*   **Action**: Let `definedContexts` be the list of `Project Contexts` read from `integration_config.md`.
+*   **Condition**: If `definedContexts` contains more than one context:
+    *   **Action**: Extract `context_name` from each defined context.
+    *   **Action**: Ask user: "For which project context are we planning new tasks? Please select from: [List of `context_name`s]."
+    *   **Action**: Store the user's selection as `activeProjectContext`.
+*   **Condition**: If `definedContexts` contains exactly one context:
+    *   **Action**: Automatically select this single context as `activeProjectContext`.
+    *   **Report**: "Using project context: '[activeProjectContext.context_name]' for new tasks."
+*   **Condition**: If `definedContexts` is empty or not found:
+    *   **Report**: "ERROR: No project contexts are defined in `integration_config.md`. Please configure at least one project context."
+    *   **Action**: Stop PLAN mode.
+*   **Action**: Let `selectedJiraProjectKey = activeProjectContext.jira_project_key`.
+*   **Action**: Let `selectedJiraDefaultIssueType = activeProjectContext.jira_default_issue_type`.
+*   **Action**: Let `selectedContextName = activeProjectContext.context_name`.
+
+### Step 3: Identify Planning Goal (for selected context)
+*   **Action**: Based on the general context and the `activeProjectContext`, clearly state the main goal or feature for which new tasks will be planned.
+*   **Report**: "Planning Goal for new tasks in project context '[selectedContextName]': [Formulated Goal]."
 
 ### Step 4: Generate Epic/Sprint/Task Plan with Final SP (LLM Task)
-*   **Instruction (Prompt for LLM)**: "Analyze the formulated goal (from Step 3) and project context. Using your understanding of software development and project management:
+*   **Instruction (Prompt for LLM)**: "You are planning for the project context: '[selectedContextName]' (Jira Project: [selectedJiraProjectKey]). Analyze the formulated goal (from Step 3) and project context. Using your understanding of software development and project management:
     1.  Identify 2-5 major logical blocks of work (**Epics**). Give each a clear name.
     2.  For **each Epic**, propose a list of **specific, actionable tasks** (including name and a brief description for each task if possible).
     3.  Group tasks into sequential **Sprints** (e.g., 3-7 tasks each). Name the Sprints.
-    4.  **For each task, provide a FINAL Story Point (SP) estimation.** Base this on task complexity. For reference: in this project, 1 SP is approximately 8 developer hours or 10 AI minutes of intensive work (refer to `integration_config.md` for the exact formula). This SP estimation is definitive.
-    5.  Format the plan using Markdown: Level 2 headings (`##`) for Epics, Level 3 (`###`) for Sprints, and lists (`- [Task Name] - SP: X. Description: [Task Description]`) for tasks."
-*   **(Internal LLM Execution)**: AI model processes and generates the plan with SP and task descriptions.
+    4.  **For each task, provide a FINAL Story Point (SP) estimation.** Base this on task complexity. For reference: in this project, 1 SP is approximately 8 developer hours or 10 AI minutes of intensive work (refer to global settings in `integration_config.md` for the exact formula). This SP estimation is definitive.
+    5.  Format the plan using Markdown: Level 2 headings (`##`) for Epics, Level 3 (`###`) for Sprints, and lists (`- [Task Name] - SP: X. Description: [Task Description]`) for tasks. **Do NOT include Jira IDs or context names in this generated plan text, as those will be added later.**"
+*   **(Internal LLM Execution)**: AI model processes and generates the plan (Epic -> Sprint -> Task List with Name, SP, Description).
 
 ### Step 5: Output Generated Plan with Final SP
-*   **Action**: Output the complete plan generated by LLM, including Epics, Sprints, task names, their descriptions, and their **final SP estimations**.
-*   **Report**: "Here is the proposed plan with final Story Point estimations for each task. These estimations will be used for Jira issue creation/updates, with SPs noted in the description."
+*   **Action**: Output the complete plan generated by LLM.
+*   **Report**: "Here is the proposed plan for project context '[selectedContextName]'. SP estimations are final. Next, we'll process these for Jira (project [selectedJiraProjectKey]) and update `tasks.md`."
 
-### Step 5.1: Process Epics & Tasks for Jira Creation with SP in Description
-*   **Action**: Retrieve the project key (let's call it `jiraProjectKey`) from `integration_config.md`.
-*   **Action**: For each Epic identified in the plan generated in Step 4:
-    *   **Action**: Let `epicName` be the name of the current Epic.
-    *   **Action**: Internally sum the SPs for all tasks listed under this Epic. Let this be `totalEpicSp`.
-    *   **Action**: Create a formatted string `taskListStringForEpicDesc` of all tasks under this epic (e.g., "- Task A (SP: 2) - Description: ...\n- Task B (SP: 1) - Description: ...").
-    *   **Action**: Create a string for the Epic's description: `epicDescription = "Total Story Points for this Epic: [totalEpicSp]\n\nTasks:\n" + taskListStringForEpicDesc`
-
+### Step 5.1: Process Epics & Tasks for Jira Creation (using selected context)
+*   **Action**: Initialize an empty list `createdOrUpdatedJiraIssues = []` to store details of issues successfully processed with Jira.
+*   **Action**: For each Epic in the plan from Step 4 (`epicName`, and its list of tasks):
+    *   Calculate `totalEpicSp`. Create `taskListStringForEpicDesc` and `epicDescription` (including `Total SP` and `Project Context: [selectedContextName]`).
     *   **Condition**: If `totalEpicSp < 7`:
-        *   **Action**: Ask user: "Epic '[epicName]' has a total SP of [totalEpicSp], which is less than 7. Instead of creating separate Jira tasks, I propose creating only the Epic in Jira and including its tasks and total SP in the Epic's description. Create Epic '[epicName]' this way?"
-        *   **Condition**: If user agrees (e.g., says "yes", "ok", "да", "согласен"):
-            *   **Action**: Call `mcp_mcp-atlassian_jira_create_issue` with:
-                *   `project_key`: `jiraProjectKey`
-                *   `summary`: `epicName`
-                *   `issue_type`: 'Epic'
-                *   `description`: `epicDescription`
-            *   **Report**: "Jira Epic [KEY-XXX] '[epicName]' created with tasks and total SP in description."
-            *   *(Continue to the next Epic in the loop, skipping individual task creation for this one)*
-        *   **Condition**: Else (user disagrees or says "no", "нет"):
-            *   **Report**: "Understood. I will create Epic '[epicName]' and its tasks as separate Jira issues, with SP in their respective descriptions."
-            *   *(Proceed to the logic in the next "Else (totalEpicSp >= 7 or user disagreed)" block for this Epic)*
+        *   Ask user about consolidating. If yes:
+            *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `epicDescription`).
+            *   If successful, add `{jira_id: EPIC_KEY, title: epicName, sp: totalEpicSp, description: taskListStringForEpicDesc, is_epic_only: true}` to `createdOrUpdatedJiraIssues`.
+            *   Report success. Continue to next Epic.
+        *   If user says no to consolidation, proceed as if `totalEpicSp >= 7`.
+    *   **Condition**: Else (`totalEpicSp >= 7` or user disagreed with consolidation):
+        *   Ask user to create Epic. If yes:
+            *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `"Total Story Points for this Epic (project context '[selectedContextName]'): [totalEpicSp]"`).
+            *   If successful, let `parentEpicKey` be the new Jira key. Add `{jira_id: parentEpicKey, title: epicName, sp: totalEpicSp, description: "(Epic - tasks listed separately)", is_epic_only: false, sub_tasks: []}` to `createdOrUpdatedJiraIssues` (or find the entry if it was just added and set `is_epic_only` to false and prepare `sub_tasks` list).
+            *   Report success.
+            *   For each task (`taskName`, `taskSp`, `taskDescription`) under this Epic:
+                *   Confirm other Jira details (components, labels).
+                *   Let `jiraTaskDescription = "Story Points: [taskSp]\nProject Context: '[selectedContextName]'\n\nOriginal Description:\n" + taskDescription`.
+                *   Ask user to create Jira issue. If yes:
+                    *   Call `mcp_mcp-atlassian_jira_create_issue` for Task (project `selectedJiraProjectKey`, summary `taskName`, type `selectedJiraDefaultIssueType`, description `jiraTaskDescription`, parent `parentEpicKey`).
+                    *   If successful, add/append to `sub_tasks` of the parent Epic in `createdOrUpdatedJiraIssues`: `{jira_id: TASK_KEY, title: taskName, sp: taskSp, description: taskDescription}`.
+                    *   Report success.
+*   **Report**: "Jira issue creation/update process completed for project context '[selectedContextName]'."
 
-    *   **Condition**: Else (`totalEpicSp >= 7` or user disagreed with consolidation for a small epic):
-        *   **Action**: Ask user: "Create Jira Epic '[epicName]'? (Total SP: [totalEpicSp] will be noted in its description)."
-        *   **Condition**: If user agrees:
-            *   **Action**: Call `mcp_mcp-atlassian_jira_create_issue` with:
-                *   `project_key`: `jiraProjectKey`
-                *   `summary`: `epicName`
-                *   `issue_type`: 'Epic'
-                *   `description`: `"Total Story Points for this Epic: [totalEpicSp]"` (Or a more detailed description if available/needed)
-            *   **Report**: "Jira Epic [KEY-XXX] '[epicName]' created. Total SP will be noted in its description. Let this be `parentEpicKey`."
-            *   **Action**: For each task under this `epicName` (let `taskName`, `taskSp`, `taskDescription` be its details from the plan):
-                *   **Action**: Confirm with user other necessary details for Jira for this task (e.g., components, labels if not clear from context or plan).
-                *   **Action**: Let `jiraTaskDescription = "Story Points: [taskSp]\n\nOriginal Description:\n" + taskDescription`
-                *   **Action**: Ask user: "Create Jira issue for '[taskName]' (SP: [taskSp] will be in description) and link to Epic '[epicName]' ([parentEpicKey])?"
-                *   **Condition**: If user confirms:
-                    *   **Action**: Call `mcp_mcp-atlassian_jira_create_issue` with:
-                        *   `project_key`: `jiraProjectKey`
-                        *   `summary`: `taskName`
-                        *   `issue_type`: 'Story' (or default from `integration_config.md`)
-                        *   `description`: `jiraTaskDescription`
-                        *   `additional_fields`: `{"parent": {"key": parentEpicKey}}` (and other confirmed details like components, labels).
-                    *   **Report**: "Jira issue [KEY-YYY] '[taskName]' created with SP in description and linked to Epic [parentEpicKey]."
-                *   **Condition**: If user declines, skip Jira creation for this specific task.
-        *   **Condition**: Else (user declines Epic creation):
-            *   **Report**: "Epic '[epicName]' and its tasks will not be created in Jira."
-
-*   **Report**: "Jira issue creation/update process completed for the planned Epics and tasks."
+### Step 5.2: Update Local `tasks.md` File
+*   **Action**: Read `integration_config.md` for the `tasks.md` line format.
+*   **Action**: For each entry in `createdOrUpdatedJiraIssues`:
+    *   **Condition**: If `is_epic_only` is true for an Epic entry:
+        *   Formulate the `tasks.md` line: `- [ ] **[[selectedJiraProjectKey]:[epic.jira_id]]** [EPIC] [epic.title] - *Tasks in description* - **SP: [epic.sp]** (Context: [selectedContextName])`
+        *   Propose `edit_file` to append this line to `tasks.md` under a relevant heading (e.g., `## Epics for [selectedContextName]`).
+    *   **Condition**: Else (it's an Epic with separate tasks, or a standalone task if Epics are not used for some reason):
+        *   If it's an Epic (`parentEpicKey` was set for it), formulate its line:
+          `- [ ] **[[selectedJiraProjectKey]:[epic.jira_id]]** [EPIC] [epic.title] - **SP: [epic.sp]** (Context: [selectedContextName])`
+        *   Propose `edit_file` to append this line to `tasks.md`.
+        *   For each `sub_task` associated with this Epic in `createdOrUpdatedJiraIssues`:
+            *   Formulate the `tasks.md` line: `- [ ] **[[selectedJiraProjectKey]:[sub_task.jira_id]]** [sub_task.title] - *[sub_task.description]* - **SP: [sub_task.sp]** (Context: [selectedContextName])`
+            *   Propose `edit_file` to append this line to `tasks.md` (indented under the Epic, if possible, or as a flat list).
+*   **Report**: "`tasks.md` has been updated/proposed with new tasks for project context '[selectedContextName]'."
 
 ### Step 6: PLAN Mode End
-*   The mode concludes. User can review Jira or proceed to another mode.
+*   The mode concludes. User can review Jira and `tasks.md`.
