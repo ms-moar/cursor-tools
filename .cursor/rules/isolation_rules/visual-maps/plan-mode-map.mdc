@@ -6,7 +6,7 @@ alwaysApply: false
 # PLAN MODE: LLM-Powered Planning Workflow
 
 ## OVERVIEW
-This mode uses the AI's Large Language Model (LLM) capabilities to analyze the project goal and context, then propose a high-level plan structured into Epics, Sprints, and Tasks. The output of this mode is the generated plan text, intended for review and subsequent manual refinement or use in updating `tasks.md`.
+This mode uses the AI's Large Language Model (LLM) capabilities to analyze the project goal and context, then propose a high-level plan structured into Epics, Sprints, and Tasks, including definitive Story Point (SP) estimations. The output is a plan for review and subsequent Jira issue creation.
 
 ## WORKFLOW
 
@@ -15,38 +15,85 @@ graph TD
     Start["PLAN Mode Start"] --> AutoSync["Step 1: Auto-Sync Completed Tasks (Optional)"]
     AutoSync --> ReadContext["Step 2: Read Project Context"]
     ReadContext --> IdentifyGoal["Step 3: Identify Planning Goal"]
-    IdentifyGoal --> GeneratePlan["Step 4: Generate Epic/Sprint/Task Plan (LLM Task)"]
-    GeneratePlan --> OutputPlan["Step 5: Output Generated Plan Text"]
-    OutputPlan --> End["PLAN Mode End - Review Plan"]
+    IdentifyGoal --> GeneratePlanWithSP["Step 4: Generate Epic/Sprint/Task Plan with Final SP (LLM Task)"]
+    GeneratePlanWithSP --> OutputPlan["Step 5: Output Generated Plan with Final SP"]
+    OutputPlan --> JiraSync["Step 5.1: Process Epics & Tasks for Jira Creation with SP in Description"]
+    JiraSync --> End["PLAN Mode End"]
 ```
 
 ## DETAILED STEPS
 
 ### Step 1: Auto-Sync Completed Tasks (Optional Check)
-*   **(Optional) Action**: Perform the automatic check for tasks completed in Jira but not updated in `tasks.md`, proposing `edit_file` if needed. (Keep this step for data hygiene).
+*   **(Optional) Action**: Perform the automatic check for tasks completed in Jira but not updated locally (if a local task representation is used), proposing `edit_file` if needed.
 
 ### Step 2: Read Project Context
-*   **Action**: Read relevant context files to understand the project goals and current state. Primarily focus on:
-    *   `projectbrief.md` (If available)
-    *   `activeContext.md` (If available and relevant)
-    *   `tasks.md` (To understand existing tasks and structure)
-    *   User's initial request for planning.
+*   **Action**: Read relevant context files (e.g., `projectbrief.md`, `activeContext.md`, `integration_config.md` for SP formula) and user's initial request for planning.
 
 ### Step 3: Identify Planning Goal
-*   **Action**: Based on the context read in Step 2, clearly state the main goal or feature that needs to be planned. Ask the user for clarification if the goal is unclear.
+*   **Action**: Based on the context, clearly state the main goal or feature. Ask for clarification if unclear.
 *   **Report**: "Planning Goal: [Formulated Goal]."
 
-### Step 4: Generate Epic/Sprint/Task Plan (LLM Task)
-*   **Instruction (Prompt for LLM)**: "Analyze the formulated goal (from Step 3) and the project context read. Using your understanding of software development and project management:
-    1.  Identify 2-5 major logical blocks of work (**Epics**) required to achieve the goal. Give each Epic a clear name.
-    2.  For **each Epic**, propose a list of **specific, actionable tasks** required for its implementation. Formulate tasks clearly.
-    3.  Group the proposed tasks into sequential **Sprints** (e.g., 3-7 tasks each, or based on estimated complexity for 1-2 weeks of work). Name the Sprints (e.g., 'Sprint 1', 'Sprint 2', or by dates).
-    4.  Format the entire plan using Markdown: Level 2 headings (`##`) for Epics, Level 3 headings (`###`) for Sprints, and lists (`- [ ]`) for tasks."
-*   **(Internal LLM Execution)**: The AI model will process this prompt and generate the plan structure based on its understanding.
+### Step 4: Generate Epic/Sprint/Task Plan with Final SP (LLM Task)
+*   **Instruction (Prompt for LLM)**: "Analyze the formulated goal (from Step 3) and project context. Using your understanding of software development and project management:
+    1.  Identify 2-5 major logical blocks of work (**Epics**). Give each a clear name.
+    2.  For **each Epic**, propose a list of **specific, actionable tasks** (including name and a brief description for each task if possible).
+    3.  Group tasks into sequential **Sprints** (e.g., 3-7 tasks each). Name the Sprints.
+    4.  **For each task, provide a FINAL Story Point (SP) estimation.** Base this on task complexity. For reference: in this project, 1 SP is approximately 8 developer hours or 10 AI minutes of intensive work (refer to `integration_config.md` for the exact formula). This SP estimation is definitive.
+    5.  Format the plan using Markdown: Level 2 headings (`##`) for Epics, Level 3 (`###`) for Sprints, and lists (`- [Task Name] - SP: X. Description: [Task Description]`) for tasks."
+*   **(Internal LLM Execution)**: AI model processes and generates the plan with SP and task descriptions.
 
-### Step 5: Output Generated Plan Text
-*   **Action**: Output the complete plan text generated by the LLM in the previous step directly into the chat for user review.
-*   **Report**: "Here is the proposed plan, broken down by Epics and Sprints. Please review it. You can use this plan to update `tasks.md` or for further discussion."
+### Step 5: Output Generated Plan with Final SP
+*   **Action**: Output the complete plan generated by LLM, including Epics, Sprints, task names, their descriptions, and their **final SP estimations**.
+*   **Report**: "Here is the proposed plan with final Story Point estimations for each task. These estimations will be used for Jira issue creation/updates, with SPs noted in the description."
 
-### Step 6: PLAN Mode End - Review Plan
-*   The mode concludes after presenting the plan. Further actions (like editing `tasks.md` based on this plan, creating Jira tickets, or moving to another mode) should be initiated by the user in subsequent requests.
+### Step 5.1: Process Epics & Tasks for Jira Creation with SP in Description
+*   **Action**: Retrieve the project key (let's call it `jiraProjectKey`) from `integration_config.md`.
+*   **Action**: For each Epic identified in the plan generated in Step 4:
+    *   **Action**: Let `epicName` be the name of the current Epic.
+    *   **Action**: Internally sum the SPs for all tasks listed under this Epic. Let this be `totalEpicSp`.
+    *   **Action**: Create a formatted string `taskListStringForEpicDesc` of all tasks under this epic (e.g., "- Task A (SP: 2) - Description: ...\n- Task B (SP: 1) - Description: ...").
+    *   **Action**: Create a string for the Epic's description: `epicDescription = "Total Story Points for this Epic: [totalEpicSp]\n\nTasks:\n" + taskListStringForEpicDesc`
+
+    *   **Condition**: If `totalEpicSp < 7`:
+        *   **Action**: Ask user: "Epic '[epicName]' has a total SP of [totalEpicSp], which is less than 7. Instead of creating separate Jira tasks, I propose creating only the Epic in Jira and including its tasks and total SP in the Epic's description. Create Epic '[epicName]' this way?"
+        *   **Condition**: If user agrees (e.g., says "yes", "ok", "да", "согласен"):
+            *   **Action**: Call `mcp_mcp-atlassian_jira_create_issue` with:
+                *   `project_key`: `jiraProjectKey`
+                *   `summary`: `epicName`
+                *   `issue_type`: 'Epic'
+                *   `description`: `epicDescription`
+            *   **Report**: "Jira Epic [KEY-XXX] '[epicName]' created with tasks and total SP in description."
+            *   *(Continue to the next Epic in the loop, skipping individual task creation for this one)*
+        *   **Condition**: Else (user disagrees or says "no", "нет"):
+            *   **Report**: "Understood. I will create Epic '[epicName]' and its tasks as separate Jira issues, with SP in their respective descriptions."
+            *   *(Proceed to the logic in the next "Else (totalEpicSp >= 7 or user disagreed)" block for this Epic)*
+
+    *   **Condition**: Else (`totalEpicSp >= 7` or user disagreed with consolidation for a small epic):
+        *   **Action**: Ask user: "Create Jira Epic '[epicName]'? (Total SP: [totalEpicSp] will be noted in its description)."
+        *   **Condition**: If user agrees:
+            *   **Action**: Call `mcp_mcp-atlassian_jira_create_issue` with:
+                *   `project_key`: `jiraProjectKey`
+                *   `summary`: `epicName`
+                *   `issue_type`: 'Epic'
+                *   `description`: `"Total Story Points for this Epic: [totalEpicSp]"` (Or a more detailed description if available/needed)
+            *   **Report**: "Jira Epic [KEY-XXX] '[epicName]' created. Total SP will be noted in its description. Let this be `parentEpicKey`."
+            *   **Action**: For each task under this `epicName` (let `taskName`, `taskSp`, `taskDescription` be its details from the plan):
+                *   **Action**: Confirm with user other necessary details for Jira for this task (e.g., components, labels if not clear from context or plan).
+                *   **Action**: Let `jiraTaskDescription = "Story Points: [taskSp]\n\nOriginal Description:\n" + taskDescription`
+                *   **Action**: Ask user: "Create Jira issue for '[taskName]' (SP: [taskSp] will be in description) and link to Epic '[epicName]' ([parentEpicKey])?"
+                *   **Condition**: If user confirms:
+                    *   **Action**: Call `mcp_mcp-atlassian_jira_create_issue` with:
+                        *   `project_key`: `jiraProjectKey`
+                        *   `summary`: `taskName`
+                        *   `issue_type`: 'Story' (or default from `integration_config.md`)
+                        *   `description`: `jiraTaskDescription`
+                        *   `additional_fields`: `{"parent": {"key": parentEpicKey}}` (and other confirmed details like components, labels).
+                    *   **Report**: "Jira issue [KEY-YYY] '[taskName]' created with SP in description and linked to Epic [parentEpicKey]."
+                *   **Condition**: If user declines, skip Jira creation for this specific task.
+        *   **Condition**: Else (user declines Epic creation):
+            *   **Report**: "Epic '[epicName]' and its tasks will not be created in Jira."
+
+*   **Report**: "Jira issue creation/update process completed for the planned Epics and tasks."
+
+### Step 6: PLAN Mode End
+*   The mode concludes. User can review Jira or proceed to another mode.
