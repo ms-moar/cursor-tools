@@ -3,15 +3,19 @@ description: QA Mode
 globs: qa-mode-map.mdc
 alwaysApply: false
 ---
+# QA MODE MAP (Multi-Context)
 
-
-> **TL;DR:** This enhanced QA mode provides comprehensive validation at any stage of development. It automatically detects the current phase, validates Memory Bank consistency, verifies task tracking, and performs phase-specific technical validation to ensure project quality throughout the development lifecycle.
+> **TL;DR:** This enhanced QA mode provides comprehensive validation for a task selected from `tasks.md` or for a general phase within a chosen Project Context. It validates task integrity in Jira, local documentation, and performs technical/DevOps checks relevant to the active context.
 
 ## 🔍 ENHANCED QA MODE PROCESS FLOW
 
 ```mermaid
 graph TD
-    Start["🚀 START QA MODE"] --> DetectPhase["🧭 PHASE DETECTION<br>Determine current project phase"]
+    Start["🚀 START QA MODE"] --> ReadGlobalConfig["Step 0.1: Read Global Configs"]
+    ReadGlobalConfig --> SelectActiveContext["Step 0.2: Select Active Project Context"]
+    SelectActiveContext --> IdentifyTarget["Step 0.3: Identify QA Target (Specific Jira Task or General Phase)"]
+    
+    IdentifyTarget --> DetectPhase["🧭 PHASE DETECTION (for [activeProjectContext.context_name] / [qaTargetJiraIssueKey])"]
     
     %% Phase detection decision path
     DetectPhase --> PhaseDetermination{"Current Phase?"}
@@ -20,28 +24,27 @@ graph TD
     PhaseDetermination -->|"CREATIVE"| CREATIVEChecks["CREATIVE Phase Validation"] 
     PhaseDetermination -->|"IMPLEMENT"| IMPLEMENTChecks["IMPLEMENT Phase Validation"]
     
-    %% Universal checks that apply to all phases
-    DetectPhase --> UniversalChecks["🔍 UNIVERSAL VALIDATION"]
-    UniversalChecks --> MemoryBankCheck["1️⃣ MEMORY BANK VERIFICATION<br>Check consistency & updates"]
-    MemoryBankCheck --> TaskTrackingCheck["2️⃣ TASK TRACKING VERIFICATION<br>Validate tasks.md as source of truth"]
-    TaskTrackingCheck --> ReferenceCheck["3️⃣ REFERENCE VALIDATION<br>Verify cross-references between docs"]
+    %% Universal checks adapted for context and tasks.md
+    IdentifyTarget --> UniversalChecks["🔍 UNIVERSAL VALIDATION (for [activeProjectContext.context_name])"]
+    UniversalChecks --> TasksMDJiraSync["1️⃣ tasks.md & JIRA SYNC/INTEGRITY (for [activeProjectContext])"]
+    TasksMDJiraSync --> ReferenceCheck["2️⃣ REFERENCE VALIDATION (docs to Jira tasks in context)"]
     
     %% Phase-specific validations feed into comprehensive report
     VANChecks & PLANChecks & CREATIVEChecks & IMPLEMENTChecks --> PhaseSpecificResults["Phase-Specific Results"]
     ReferenceCheck & PhaseSpecificResults --> ValidationResults{"✅ All Checks<br>Passed?"}
     
     %% Results Processing
-    ValidationResults -->|"Yes"| SuccessReport["📝 GENERATE SUCCESS REPORT<br>All validations passed"]
+    ValidationResults -->|"Yes"| SuccessReport["📝 GENERATE SUCCESS REPORT"]
 
-    %% JIRA INTEGRATION START
-    SuccessReport --> UpdateJiraStatus["📚 Update Jira Status to 'In Progress'"]
-    UpdateJiraStatus --> SuggestBuild["🚦 Suggest BUILD/IMPLEMENT Mode"]
+    %% JIRA INTEGRATION START (using selected context)
+    SuccessReport --> UpdateJiraStatus["📚 Update Jira Status for [qaTargetJiraIssueKey] (if any) in [selectedJiraProjectKey]"]
+    UpdateJiraStatus --> SuggestNextMode["🚦 Suggest Next Mode for [selectedJiraProjectKey]"]
     %% JIRA INTEGRATION END
 
     ValidationResults -->|"No"| FailureReport["⚠️ GENERATE FAILURE REPORT<br>With specific fix instructions"]
     
     %% Success Path
-    UpdateJiraStatus --> ContinueProcess["🚦 CONTINUE: Phase processes<br>can proceed"]
+    SuggestNextMode --> ContinueProcess["🚦 CONTINUE: Phase processes<br>can proceed"]
     
     %% Failure Path
     FailureReport --> FixIssues["🔧 Fix Technical Issues"]
@@ -50,10 +53,11 @@ graph TD
     
     %% Style nodes for clarity
     style Start fill:#4da6ff,stroke:#0066cc,color:white
+    style ReadGlobalConfig fill:#f6ad55,stroke:#c27022,color:white
+    style SelectActiveContext fill:#f6ad55,stroke:#c27022,color:white
     style DetectPhase fill:#f6ad55,stroke:#c27022,color:white
     style UniversalChecks fill:#f6546a,stroke:#c30052,color:white
-    style MemoryBankCheck fill:#10b981,stroke:#059669,color:white
-    style TaskTrackingCheck fill:#10b981,stroke:#059669,color:white
+    style TasksMDJiraSync fill:#10b981,stroke:#059669,color:white
     style ReferenceCheck fill:#10b981,stroke:#059669,color:white
     style ValidationResults fill:#f6546a,stroke:#c30052,color:white
     style SuccessReport fill:#10b981,stroke:#059669,color:white
@@ -62,8 +66,66 @@ graph TD
     style FixIssues fill:#ff5555,stroke:#dd3333,color:white
     %% JIRA Node Styles
     style UpdateJiraStatus fill:#5e72e4,stroke:#324cdd,color:white
-    style SuggestBuild fill:#10b981,stroke:#059669,color:white
+    style SuggestNextMode fill:#10b981,stroke:#059669,color:white
 ```
+
+## DETAILED STEPS (Key Updates for Context and `tasks.md`)
+
+### Step 0.1: Read Global Configs
+*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, and `tasks.md` format info.
+
+### Step 0.2: Select Active Project Context
+*   **Action**: (As defined in previous modes - user selects `activeProjectContext`).
+*   **Action**: Store `selectedJiraProjectKey`, `selectedJiraStatusMapping`, `selectedContextName`, GitLab/Vercel keys from `activeProjectContext`.
+
+### Step 0.3: Identify QA Target (Specific Jira Task or General Phase for active context)
+*   **Action**: Ask user: "Are we performing QA for a specific Jira Task in project '[selectedJiraProjectKey]' (context: '[selectedContextName]')? If yes, please provide the Jira Issue Key from `tasks.md` or Jira. Otherwise, QA will be general for the current phase of this context."
+*   **Action**: If user provides Jira Key (e.g., `[selectedJiraProjectKey]-NNN`):
+    *   Store as `qaTargetJiraIssueKey`.
+    *   Attempt to find and store `qaSelectedTaskLine` from `tasks.md` matching this key and context.
+    *   Fetch its details from Jira for context.
+*   **Action**: Else (general QA for phase):
+    *   Set `qaTargetJiraIssueKey = null`.
+    *   `qaSelectedTaskLine = null`.
+
+### Step 1: Detect Current Phase and Prepare (within selected context / for target task)
+*   **Action**: If `qaTargetJiraIssueKey` is set, use its Jira status (and `selectedJiraStatusMapping`) to infer the current phase of this specific task.
+*   **Action**: Else (general QA), analyze `activeContext.md` (if used and context-specific) or query Jira for recently updated tasks in `selectedJiraProjectKey` to infer current project phase for `selectedContextName`.
+*   **Action**: Load appropriate validation checklist based on detected phase and `activeProjectContext`.
+
+### Step 2: Perform Universal Checks (adapted for selected context and `tasks.md`)
+*   **`tasks.md` & Jira Sync/Integrity Check (for `activeProjectContext`):**
+    *   **Action**: Read `tasks.md`. For each line matching `(Context: [selectedContextName])`:
+        *   Parse `JIRA_PROJECT_KEY_FROM_TASK`, `JIRA_ISSUE_ID_FROM_TASK`, local status.
+        *   Verify `JIRA_PROJECT_KEY_FROM_TASK` matches `selectedJiraProjectKey`.
+        *   Call `mcp_mcp-atlassian_jira_get_issue` for `JIRA_ISSUE_ID_FROM_TASK`.
+        *   Compare Jira status and SP (from description) with `tasks.md` entry. Propose `edit_file` for `tasks.md` if discrepancies are found (e.g., status, SP, title).
+        *   Check if task exists in Jira but not in `tasks.md` for this context (might require broader Jira search filtered by context if `tasks.md` is incomplete).
+        *   Check if task in `tasks.md` for this context is closed in Jira but still open locally.
+*   **Reference Validation**: If `qaTargetJiraIssueKey` is set, check links between local creative/plan docs (e.g., `creative-[qaTargetJiraIssueKey].md`) and the Jira task.
+
+### Step 3: Execute Phase-Specific Validation (within selected context)
+*   **Action**: Run validation steps specific to the detected phase for `activeProjectContext` or `qaTargetJiraIssueKey`.
+*   **IMPLEMENT Phase - DevOps Pipeline Validation (using `activeProjectContext` settings)**:
+    *   Check GitLab CI config (e.g., `.gitlab-ci.yml` in the root or context-specific path if defined).
+    *   Validate CI config: `python devops-tools/gitlab/gitlab_tools.py validate-ci-config .gitlab-ci.yml --repo_url [activeProjectContext.gitlab_repo_url]` (if repo_url is available in context).
+    *   Check last pipeline status for `activeProjectContext.gitlab_default_branch`: `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_repo_url]`.
+    *   If `activeProjectContext.vercel_project_id` exists, ask user if Vercel is used. If yes, validate `vercel.json` and optionally check Vercel deployment status for this context.
+
+### Step 5: Report Results and Prepare for Transition (using selected context)
+*   **Configuration Reading**: Use `selectedJiraProjectKey` and `selectedJiraStatusMapping`.
+*   **Generate Report**: Mention `activeProjectContext.context_name` and `qaTargetJiraIssueKey` (if any).
+*   **If Successful**: ✅
+    *   **Update Jira Status (if `qaTargetJiraIssueKey` is set)**:
+        *   Let `qaPassStatus` be the appropriate status from `selectedJiraStatusMapping` (e.g., value for `VAN_QA` or a specific `QA_PASSED` key).
+        *   Call `mcp_mcp-atlassian_jira_transition_issue` (or `update_issue`) for `qaTargetJiraIssueKey` to `qaPassStatus`.
+        *   Report: "Jira Task [qaTargetJiraIssueKey] in project [selectedJiraProjectKey] status updated to [qaPassStatus]."
+    *   **Update `tasks.md` (if `qaTargetJiraIssueKey` is set and `qaSelectedTaskLine` exists)**:
+        *   Propose `edit_file` for `tasks.md` to update the status of `qaSelectedTaskLine` (e.g., change checkbox or add note like "- QA Passed").
+    *   **Transition**: Suggest next mode.
+*   **If Failed**: ❌ (Report failure, BUILD mode blocked for `qaTargetJiraIssueKey` if set).
+
+*Instruction for AI: Sections like `UNIVERSAL MEMORY BANK VERIFICATION`, `TASK TRACKING VERIFICATION` (their old diagrammatic representations), `UNIVERSAL VALIDATION COMMAND EXECUTION`, specific `DEPENDENCY/CONFIGURATION/ENVIRONMENT/MINIMAL BUILD TEST PROCESS` sections, and report formats need thorough review. They must be adapted to use `tasks.md` as a multi-context list and perform checks against Jira within the `activeProjectContext`. Many old commands targeting a generic `tasks.md` or `memory-bank/` directory are no longer valid without context filtering.*
 
 ## 🧭 PHASE DETECTION PROCESS
 

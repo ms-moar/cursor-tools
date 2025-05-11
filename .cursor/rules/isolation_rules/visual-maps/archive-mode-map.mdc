@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
 description: Visual process map for ARCHIVE mode (Task Documentation)
 globs: "**/archive*/**", "**/document*/**", "**/complete*/**"
 alwaysApply: false
@@ -11,73 +6,75 @@ alwaysApply: false
 
 # ARCHIVE MODE: TASK DOCUMENTATION PROCESS MAP
 
-> **TL;DR:** This visual map guides the ARCHIVE mode process, focusing on creating comprehensive documentation of the completed task, archiving relevant files, and updating the Memory Bank for future reference.
+> **TL;DR:** This visual map guides the ARCHIVE mode process, focusing on creating comprehensive documentation of the completed task (identified by its Jira ID from a selected Project Context), archiving relevant files, and updating configurations for future reference.
 
 ## 🧭 ARCHIVE MODE PROCESS FLOW
 
 ```mermaid
 graph TD
-    Start["START ARCHIVE MODE"] --> ReadTasks["Read tasks.md<br>reflection.md and<br>progress.md"]
+    Start["START ARCHIVE MODE"] --> ReadGlobalConfig["Step 0.1: Read Global Configs"]
+    ReadGlobalConfig --> SelectActiveContext["Step 0.2: Select Active Project Context"]
+    
+    SelectActiveContext --> GetJiraTask["Step 0.3: Identify Jira Task to Archive"]
+    GetJiraTask --> ReadLocalDocs["Step 1: Read reflection.md & progress.md (if they exist)"]
     
     %% Initial Assessment
-    ReadTasks --> VerifyReflect{"Reflection<br>Complete?"}
+    ReadLocalDocs --> VerifyReflect{"Reflection<br>Complete? (based on reflection.md or Jira status)"}
     VerifyReflect -->|"No"| ReturnReflect["Return to<br>REFLECT Mode"]
-    VerifyReflect -->|"Yes"| AssessLevel{"Determine<br>Complexity Level"}
+    VerifyReflect -->|"Yes"| AssessLevel{"Determine<br>Complexity Level (from Jira or user input)"}
     
-    %% Level-Based Archiving
+    %% Level-Based Archiving (This section might need to be re-evaluated if tasks.md was central to it)
     AssessLevel -->|"Level 1"| L1Archive["LEVEL 1 ARCHIVING<br>Level1/archive-minimal.md"]
     AssessLevel -->|"Level 2"| L2Archive["LEVEL 2 ARCHIVING<br>Level2/archive-basic.md"]
     AssessLevel -->|"Level 3"| L3Archive["LEVEL 3 ARCHIVING<br>Level3/archive-standard.md"]
     AssessLevel -->|"Level 4"| L4Archive["LEVEL 4 ARCHIVING<br>Level4/archive-comprehensive.md"]
     
     %% Level 1 Archiving (Minimal)
-    L1Archive --> L1Summary["Create Quick<br>Summary"]
-    L1Summary --> L1Task["Update<br>tasks.md"]
-    L1Task --> L1Complete["Mark Task<br>Complete"]
+    L1Archive --> L1Summary["Create Quick<br>Summary (for Jira Task [SelectedJiraID])"]
+    L1Summary --> L1JiraUpdate["Update Jira Task [SelectedJiraID]<br>Status to Archived/Closed (using context status mapping)"]
+    L1JiraUpdate --> L1Complete["Mark Task as<br>Locally Processed"]
     
     %% Level 2 Archiving (Basic)
-    L2Archive --> L2Summary["Create Basic<br>Archive Document"]
+    L2Archive --> L2Summary["Create Basic<br>Archive Document (for Jira Task [SelectedJiraID])"]
     L2Summary --> L2Doc["Document<br>Changes"]
-    L2Doc --> L2Task["Update<br>tasks.md"]
-    L2Task --> L2Progress["Update<br>progress.md"]
-    L2Progress --> L2Complete["Mark Task<br>Complete"]
+    L2Doc --> L2JiraUpdate["Update Jira Task [SelectedJiraID]<br>Status to Archived/Closed (using context status mapping)"]
+    L2JiraUpdate --> L2Progress["Update<br>progress.md (if used)"]
+    L2Progress --> L2Complete["Mark Task as<br>Locally Processed"]
     
     %% Level 3-4 Archiving (Comprehensive)
-    L3Archive & L4Archive --> L34Summary["Create Comprehensive<br>Archive Document"]
+    L3Archive & L4Archive --> L34Summary["Create Comprehensive<br>Archive Document (for Jira Task [SelectedJiraID])"]
     L34Summary --> L34Doc["Document<br>Implementation"]
-    L34Doc --> L34Creative["Archive Creative<br>Phase Documents"]
+    L34Doc --> L34Creative["Archive Creative<br>Phase Documents (if any)"]
     L34Creative --> L34Code["Document Code<br>Changes"]
     L34Code --> L34Test["Document<br>Testing"]
     L34Test --> L34Lessons["Summarize<br>Lessons Learned"]
-    L34Lessons --> L34Task["Update<br>tasks.md"]
-    L34Task --> L34Progress["Update<br>progress.md"]
-    L34Progress --> L34System["Update System<br>Documentation"]
-    L34System --> L34Complete["Mark Task<br>Complete"]
+    L34Lessons --> L34JiraUpdate["Update Jira Task [SelectedJiraID]<br>Status to Archived/Closed (using context status mapping)"]
+    L34JiraUpdate --> L34Progress["Update<br>progress.md (if used)"]
+    L34Progress --> L34System["Update System<br>Documentation (if applicable)"]
+    L34System --> L34Complete["Mark Task as<br>Locally Processed"]
     
     %% Completion
-    L1Complete & L2Complete & L34Complete --> CreateArchive[\"Create Archive<br>Document in<br>docs/archive/\"]
+    L1Complete & L2Complete & L34Complete --> CreateLocalArchiveDoc[\"Create Archive<br>Document in<br>docs/archive/ (for [SelectedJiraID])\"]
 
     %% LOCAL DOCS & CONFLUENCE INTEGRATION START
-    CreateArchive --> VerifyDocsDir[\"Verify/Create<br>docs/archive/ directory\"]
-    VerifyDocsDir --> WriteLocalDoc[\"Write Summary<br>to docs/archive/\"]
-    WriteLocalDoc --> UpdateConfluence[\"Update/Create<br>Confluence Page\"]
-    UpdateConfluence --> UpdateActive[\"Update<br>activeContext.md\"]
+    CreateLocalArchiveDoc --> VerifyDocsDir[\"Verify/Create<br>docs/archive/ directory\"]
+    VerifyDocsDir --> WriteLocalDoc[\"Write Summary<br>to docs/archive/ (for [SelectedJiraID])\"]
+    WriteLocalDoc --> UpdateConfluence[\"Update/Create Confluence Page<br>(using selected context's space_key)\"]
+    UpdateConfluence --> UpdateActiveContextMD[\"Update<br>activeContext.md (clear current task)\"]
     %% LOCAL DOCS & CONFLUENCE INTEGRATION END
 
     %% DEVOPS INTEGRATION START
-    UpdateActive --> GitLabTag[\"Create Release<br>Tag in GitLab\"]
-    GitLabTag --> VercelCheck[\"Check Vercel<br>Deployment (Optional)\"]
+    UpdateActiveContextMD --> GitLabTag[\"Create Release Tag in GitLab<br>(using selected context's repo_url)\"]
+    GitLabTag --> VercelCheck[\"Check Vercel Deployment (Optional, using context's vercel_id)\"]
     VercelCheck --> Reset[\"Reset for<br>Next Task\"]
     %% DEVOPS INTEGRATION END
 
-    %% Previously: UpdateActive --> Reset[\"Reset for<br>Next Task\"]
-
     %% Node Styles
-    style CreateArchive fill:#87CEEB,stroke:#4682B4,color:black
+    style CreateLocalArchiveDoc fill:#87CEEB,stroke:#4682B4,color:black
     style VerifyDocsDir fill:#DAA520,stroke:#B8860B,color:black
     style WriteLocalDoc fill:#90EE90,stroke:#3CB371,color:black
     style UpdateConfluence fill:#2dce89,stroke:#24a46d,color:white
-    style UpdateActive fill:#FFD700,stroke:#B8860B,color:black
+    style UpdateActiveContextMD fill:#FFD700,stroke:#B8860B,color:black
     style GitLabTag fill:#6f42c1,stroke:#5a32a3,color:white
     style VercelCheck fill:#ee5253,stroke:#c0392b,color:white
     style Reset fill:#FFA07A,stroke:#CD5C5C,color:black
@@ -105,20 +102,26 @@ graph TD
 
 ## 📊 REQUIRED FILE STATE VERIFICATION
 
-Before archiving can begin, verify file state:
+*   **Instruction for AI**: This section needs significant rework as `tasks.md` is no longer the primary source. Verification should focus on:
+    1.  A Jira task ID for archiving has been identified for the selected `activeProjectContext`.
+    2.  `reflection.md` (if used for this task) exists and its content is finalized.
+    3.  `progress.md` (if used) reflects completed implementation steps.
+    4.  The corresponding Jira task is in a state ready for archiving (e.g., "Resolved", "QA Passed" - based on `activeProjectContext.jira_status_mapping`).
 
 ```mermaid
 graph TD
-    Start["File State<br>Verification"] --> CheckTasks{"tasks.md has<br>reflection<br>complete?"}
+    Start["File/State<br>Verification"] --> JiraTaskSelected{"Jira Task for Archive<br>Identified in activeProjectContext?"}
+    JiraTaskSelected -->|"No"| ErrorNoTask["ERROR:<br>No Jira task selected for archiving. Please specify."]
+    JiraTaskSelected -->|"Yes"| CheckReflectMD{"reflection.md <br>(for [SelectedJiraID])<br>exists & complete?"}
     
-    CheckTasks -->|"No"| ErrorReflect["ERROR:<br>Return to REFLECT Mode"]
-    CheckTasks -->|"Yes"| CheckReflection{"reflection.md<br>exists?"}
+    CheckReflectMD -->|"No (or not applicable)"| SkipReflectCheck --"Proceed with caution or return to REFLECT"--> CheckProgressMD
+    CheckReflectMD -->|"Yes"| CheckProgressMD{"progress.md <br>(for [SelectedJiraID])<br>updated?"}
     
-    CheckReflection -->|"No"| ErrorCreate["ERROR:<br>Create reflection.md first"]
-    CheckReflection -->|"Yes"| CheckProgress{"progress.md<br>updated?"}
-    
-    CheckProgress -->|"No"| ErrorProgress["ERROR:<br>Update progress.md first"]
-    CheckProgress -->|"Yes"| ReadyArchive["Ready for<br>Archiving"]
+    CheckProgressMD -->|"No (or not applicable)"| SkipProgressCheck --"Proceed with caution"--> CheckJiraStatus
+    CheckProgressMD -->|"Yes"| CheckJiraStatus{"Jira Task [SelectedJiraID]<br>Status allows Archiving? (Use context mapping)"}
+
+    CheckJiraStatus -->|"No"| ErrorJiraState["ERROR:<br>Jira task not in correct state for archiving for project [activeProjectContext.context_name]."]
+    CheckJiraStatus -->|"Yes"| ReadyArchive["Ready for<br>Archiving for [SelectedJiraID]"]
 ```
 
 ## 🔍 ARCHIVE TYPES BY COMPLEXITY
@@ -248,93 +251,74 @@ graph TD
 ```
 
 ## 📊 TASKS.MD FINAL UPDATE
-
-When archiving is complete, update tasks.md with:
-
-```
-## Status
-- [x] Initialization complete
-- [x] Planning complete
-[For Level 3-4:]
-- [x] Creative phases complete
-- [x] Implementation complete
-- [x] Reflection complete
-- [x] Archiving complete
-
-## Archive
-- **Date**: [Completion date]
-- **Archive Document**: [Link to archive document]
-- **Status**: COMPLETED
-```
+*   **Instruction for AI**: This section is OBSOLETE as `tasks.md` is no longer directly managed for status. Final status update happens in Jira. Remove this section or re-purpose for local log if any.
 
 ## 📋 ARCHIVE VERIFICATION CHECKLIST
-
 ```
-✓ ARCHIVE VERIFICATION
-- Reflection document reviewed? [YES/NO]
-- Archive document created with all sections? [YES/NO]
-- Archive document placed in correct location (docs/archive/)? [YES/NO]
-- **Local summary file created in docs/archive/? [YES/NO]**
-- **Confluence page created/updated in configured space? [YES/NO]**
-- tasks.md marked as completed? [YES/NO]
-- progress.md updated with archive reference? [YES/NO]
-- activeContext.md updated for next task? [YES/NO]
-- Creative phase documents archived (Level 3-4)? [YES/NO/NA]
-- **Release tag created in GitLab? [YES/NO]**
-- **Vercel deployment verified (if applicable)? [YES/NO/NA]**
+✓ ARCHIVE VERIFICATION (for Jira Task: [SelectedJiraID] in Project: [activeProjectContext.context_name])
+- Reflection for [SelectedJiraID] completed and reviewed? [YES/NO/NA]
+- Archive document created for [SelectedJiraID] with all sections? [YES/NO]
+- Archive document placed in `docs/archive/`? [YES/NO]
+- Local summary file for [SelectedJiraID] created in `docs/archive/`? [YES/NO]
+- Confluence page for [SelectedJiraID] created/updated in space '[activeProjectContext.confluence_space_key]' for [SelectedJiraID]? [YES/NO]
+- Jira Task [SelectedJiraID] status updated to Archived/Closed (using '[activeProjectContext.jira_status_mapping.ARCHIVE]' status)? [YES/NO]
+- `progress.md` (if used) updated with archive reference for [SelectedJiraID]? [YES/NO/NA]
+- `activeContext.md` cleared or updated for next task? [YES/NO]
+- Creative phase documents for [SelectedJiraID] archived (if Level 3-4)? [YES/NO/NA]
+- Release tag for [SelectedJiraID] created in GitLab (repo: '[activeProjectContext.gitlab_repo_url]')? [YES/NO]
+- Vercel deployment for [SelectedJiraID] verified (if applicable, project: '[activeProjectContext.vercel_project_id]')? [YES/NO/NA]
 
-→ If all YES: Archiving complete - Memory Bank reset for next task
-→ If any NO: Complete missing archive elements
+→ If all YES: Archiving complete for [SelectedJiraID]. Memory Bank reset for next task.
+→ If any NO: Complete missing archive elements for [SelectedJiraID].
 ```
 
-## 📋 TASK COMPLETION NOTIFICATION
+## 📋 TASK COMPLETION NOTIFICATION (for selected context)
+
+- **Step Pre: Identify Jira Task and Context**
+    - This mode assumes an `activeProjectContext` has been selected and a specific `SelectedJiraID` (the Jira issue key of the task to be archived) is known.
 
 - **Update Confluence Page**:
-    - **Configuration Reading**:
-        - **Action**: Read the `integration_config.md` file to get Confluence configuration.
-        - **Data**: Extract `Space Key` for Confluence.
-    - **Action**: Read the generated archive summary.
-    - **Action**: Call `mcp_mcp-atlassian_confluence_create_page` (or potentially `update_page` if a standard page per project exists).
+    - **Action**: Read `integration_config.md` to get `activeProjectContext.confluence_space_key`.
+    - **Action**: Read the generated archive summary for `SelectedJiraID`.
+    - **Action**: Call `mcp_mcp-atlassian_confluence_create_page`.
     - **Parameters**:
-        - `space_key`: Space key from configuration
-        - `title`: "Task Summary: $PROJECT_KEY-XXX - [Task Title]"
+        - `space_key`: `activeProjectContext.confluence_space_key`
+        - `title`: "Task Summary: [SelectedJiraID] - [Task Title from Jira] (Context: [activeProjectContext.context_name])"
         - `content`: Markdown summary content.
-        - `parent_id`: (Optional)
+        - `parent_id`: (Optional, may ask user or have a default per context)
     - **Error Handling**: If MCP call fails, report error, try again once. If it fails again, report error and ask user how to proceed.
 
 - **Create GitLab Release Tag**:
-    - **Action**: Ask user: "Now that the task is archived, we should create a release tag in GitLab. Would you like to use a specific version for this tag? Default format is v1.x.x."
-    - **Action**: Based on user response, propose appropriate `run_terminal_cmd` for:
-        - `python devops-tools/gitlab/gitlab_tools.py create-tag --name v1.X.Y --message "Task $PROJECT_KEY-XXX completed: Brief description"`
-    - **Action**: Wait for approval and check output for success/failure indication.
-    - **Error Handling**: If tag creation fails, report the error and ask if to try again or skip.
+    - **Action**: Read `activeProjectContext.gitlab_repo_url` (or project_url) and `activeProjectContext.jira_project_key` (to form part of the tag or message if needed).
+    - **Action**: Ask user: "Create a GitLab release tag for task [SelectedJiraID] in project '[activeProjectContext.context_name]'? Specify version (e.g., v1.x.y) or use default format."
+    - **Action**: Based on user response, propose `run_terminal_cmd` for:
+        - `python devops-tools/gitlab/gitlab_tools.py create-tag --repo_url [activeProjectContext.gitlab_repo_url] --name v1.X.Y --message "Task [SelectedJiraID] completed: [Task Title from Jira]"`
+    - **Error Handling**: If tag creation fails, report error.
 
 - **Verify Vercel Deployment (Optional)**:
-    - **Action**: Ask user: "Do you use Vercel for deployments? Would you like to verify the production deployment is up to date?"
+    - **Condition**: Check if `activeProjectContext` has `vercel_project_id` defined.
+    - **Action**: If yes, ask user: "Do you use Vercel for project '[activeProjectContext.context_name]'? Verify production deployment for [SelectedJiraID]?"
     - **Condition**: If user agrees:
-        - **Action**: Propose `run_terminal_cmd` command: `python devops-tools/vercel/vercel_tools.py status --prod`
-        - **Action**: Wait for approval.
-        - **Action**: Based on result, ask: "Do you want to trigger a new production deployment on Vercel?"
-        - **Condition**: If user agrees:
-            - **Action**: Propose `run_terminal_cmd` command: `python devops-tools/vercel/vercel_tools.py deploy --prod`
-            - **Action**: Wait for approval and check output.
+        *   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/vercel/vercel_tools.py status --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]`
+        *   **Action**: Based on result, ask: "Trigger new production deployment on Vercel for project '[activeProjectContext.context_name]'?"
+        *   **Condition**: If user agrees:
+            *   **Action**: Propose `run_terminal_cmd`: `python devops-tools/vercel/vercel_tools.py deploy --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]`
 
-Then show the final notification:
+Then show the final notification (mentioning the context):
 
 ```
-## TASK ARCHIVED
+## TASK ARCHIVED (in Project Context: [activeProjectContext.context_name])
 
-✅ Archive document created in docs/archive/
-✅ Local summary file saved in docs/archive/
-✅ Confluence page created/updated in configured space
-✅ Release tag created in GitLab repository
-✅ Vercel deployment verified (if applicable)
-✅ All task documentation preserved
-✅ Memory Bank updated with references
-✅ Task marked as COMPLETED in tasks.md
+✅ Archive document created in docs/archive/ for [SelectedJiraID]
+✅ Local summary file saved in docs/archive/ for [SelectedJiraID]
+✅ Confluence page created/updated in space '[activeProjectContext.confluence_space_key]' for [SelectedJiraID]
+✅ Release tag created in GitLab repository '[activeProjectContext.gitlab_repo_url]' for [SelectedJiraID]
+✅ Vercel deployment verified for [SelectedJiraID] (if applicable, project: '[activeProjectContext.vercel_project_id]')
+✅ All task documentation for [SelectedJiraID] preserved
+✅ Jira Task [SelectedJiraID] status updated to Archived/Closed in project [activeProjectContext.jira_project_key]
 
-→ Memory Bank is ready for the next task
-→ To start a new task, use VAN MODE
+→ Memory Bank is ready for the next task.
+→ To start a new task, use VAN MODE.
 ```
 
 *Note for AI: Remember the MCP error handling rules (retry once) and deletion of temporary files if they were used.*

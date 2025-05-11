@@ -3,22 +3,24 @@ description: Visual process map for CREATIVE mode (Design Decisions)
 globs: "**/creative*/**", "**/design*/**", "**/decision*/**"
 alwaysApply: false
 ---
-# CREATIVE MODE: DESIGN PROCESS MAP
+# CREATIVE MODE: DESIGN PROCESS MAP (Multi-Context)
 
-> **TL;DR:** This visual map guides the CREATIVE mode process, focusing on structured design decision-making for components that require deeper exploration before implementation.
+> **TL;DR:** Guides structured design decision-making for a task selected from `tasks.md` (within a chosen Project Context), syncing with Jira.
 
 ## 🧭 CREATIVE MODE PROCESS FLOW
 
 ```mermaid
 graph TD
-    Start["CREATIVE Mode Start"] --> AutoSync["Step 1: Auto-Sync Completed Tasks"]
-    AutoSync --> TaskSelect["Step 2: Select Task for Creative Work"]
-    TaskSelect --> CheckName["Step 3: Check Name & Propose Fixes"]
-    CheckName --> CheckStatusAssignee["Step 4: Check Status/Assignee & Propose Updates"]
-    CheckStatusAssignee --> UpdateTasksMD["Step 5: Propose tasks.md Update"]
-    UpdateTasksMD --> GitCheck["Step 6: Check Git Branch"]
-    GitCheck --> CreativeWork["Step 7: Execute Creative Design Process"]
-    CreativeWork --> SuggestNext["Step 8: Suggest Next Mode (IMPLEMENT)"]
+    Start["CREATIVE Mode Start"] --> ReadGlobalConfig["Step 0.1: Read Global Configs"]
+    ReadGlobalConfig --> SelectActiveContext["Step 0.2: Select Active Project Context"]
+    SelectActiveContext --> AutoSyncTasksMD["Step 1: Auto-Sync tasks.md with Jira (all contexts)"]
+    AutoSyncTasksMD --> TaskSelect["Step 2: Select Task from tasks.md for Creative Work (filtered by active context)"]
+    TaskSelect --> JiraStatusAssigneeCheck["Step 3: Check Jira Status/Assignee & Propose Updates (for selected task in its context)"]
+    JiraStatusAssigneeCheck --> UpdateTasksMDWithJiraStatus["Step 3.1: Update tasks.md with Jira Status/Assignee"]
+    UpdateTasksMDWithJiraStatus --> GitCheck["Step 4: Check Git Branch (using Jira key)"]
+    GitCheck --> CreativeWork["Step 5: Execute Creative Design Process (for selected Jira task)"]
+    CreativeWork --> UpdateTasksMDWithCreativeProgress["Step 5.1: Update tasks.md with Creative Phase Progress/Completion"]
+    UpdateTasksMDWithCreativeProgress --> SuggestNext["Step 6: Suggest Next Mode (IMPLEMENT)"]
     SuggestNext --> End["CREATIVE Mode End"]
 ```
 
@@ -74,20 +76,14 @@ graph TD
     end
 ```
 
-## 📊 REQUIRED FILE STATE VERIFICATION
-
-Before creative phase work can begin, verify file state:
-
-```mermaid
-graph TD
-    Start["File State<br>Verification"] --> CheckTasks{"tasks.md has<br>planning complete?"}
-    
-    CheckTasks -->|"No"| ErrorPlan["ERROR:<br>Return to PLAN Mode"]
-    CheckTasks -->|"Yes"| CheckCreative{"Creative phases<br>identified?"}
-    
-    CheckCreative -->|"No"| ErrorCreative["ERROR:<br>Return to PLAN Mode"]
-    CheckCreative -->|"Yes"| ReadyCreative["Ready for<br>Creative Phase"]
-```
+## 📊 REQUIRED FILE STATE VERIFICATION (Adapted)
+*   **Instruction for AI**: Verification should focus on:
+    1.  `activeProjectContext` is selected.
+    2.  `tasks.md` exists and is readable.
+    3.  A task (`selectedTaskLine` from `tasks.md`) is chosen for creative work, belonging to `activeProjectContext`.
+    4.  Jira issue ID (`selectedJiraIssueKey`) is parsed from `selectedTaskLine`.
+    5.  Relevant planning docs exist if complexity implies.
+    6.  Jira issue `selectedJiraIssueKey` is in a state ready for creative work (e.g., status from `activeProjectContext.jira_status_mapping.PLAN` or `CREATIVE` itself).
 
 ## 📋 OPTIONS ANALYSIS TEMPLATE
 
@@ -146,94 +142,74 @@ Use these visual markers for creative phases:
 🎨🎨🎨 EXITING CREATIVE PHASE - DECISION MADE 🎨🎨🎨
 ```
 
-## 📊 CREATIVE PHASE VERIFICATION CHECKLIST
+## 📊 CREATIVE PHASE VERIFICATION CHECKLIST (Adapted)
+*   **Instruction for AI**: Checklist should verify:
+    1.  Creative work for `selectedJiraIssueKey` (in `activeProjectContext.context_name`) is complete.
+    2.  Design decisions documented (e.g., in `creative-docs/creative-[selectedJiraIssueKey].md`).
+    3.  `tasks.md` entry for `selectedJiraIssueKey` is updated to reflect creative phase completion (e.g., a specific status marker or updated description).
+    4.  Jira task `selectedJiraIssueKey` status updated (e.g., to `activeProjectContext.jira_status_mapping.CREATIVE` if it was in PLAN, or ready for IMPLEMENT).
 
-```
-✓ CREATIVE PHASE VERIFICATION
-- Problem clearly defined? [YES/NO]
-- Multiple options considered (3+)? [YES/NO]
-- Pros/cons documented for each option? [YES/NO]
-- Decision made with clear rationale? [YES/NO]
-- Implementation plan included? [YES/NO]
-- Visualization/diagrams created? [YES/NO]
-- tasks.md updated with decision? [YES/NO]
-
-→ If all YES: Creative phase complete
-→ If any NO: Complete missing elements
-```
-
-## 🔄 MODE TRANSITION NOTIFICATION
-
-When all creative phases are complete, notify user with:
-
-```
-## CREATIVE PHASES COMPLETE
-
-✅ All required design decisions made
-✅ Creative phase documents created
-✅ tasks.md updated with decisions
-✅ Implementation plan updated
-
-→ NEXT RECOMMENDED MODE: IMPLEMENT MODE
-```
+## 🔄 MODE TRANSITION NOTIFICATION (Adapted)
+*   **Instruction for AI**: Notification should confirm creative phase completion for `selectedJiraIssueKey` (context '[activeProjectContext.context_name]'), mention `tasks.md` and Jira updates, and suggest IMPLEMENT mode.
 
 ## 🎨 DETAILED CREATIVE WORKFLOW STEPS
 
-### Step 1: Auto-Sync Completed Tasks
-*   *(Logic similar to Step 1 in VAN Mode)*
+### Step 0.1: Read Global Configs
+*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, `tasks.md` format.
 
-### Step 2: Select Task for Creative Work
-*   **Action**: Ask user: "Do you have a specific task ID for creative work? Otherwise, I will search for tasks in 'To Do'/'In Progress' status."
-*   **Condition**: If user provides an ID: Store `issue_key`.
-*   **Condition**: If user does not provide ID:
-    *   **Action**: Call `mcp_mcp-atlassian_jira_search` with JQL like `status IN ('To Do', 'In Development') AND assignee = currentUser() ORDER BY updated DESC`, limit 5-10, fields=summary,status.
-    *   **Action**: Present list to user.
-    *   **Action**: Ask user to select task ID.
-    *   Store selected `issue_key`.
-*   **Error Handling**: If no task selected, stop.
-*   **Report**: Confirm task: "Task [issue_key] - [Name] selected."
+### Step 0.2: Select Active Project Context
+*   **Action**: (As defined previously - user selects `activeProjectContext`).
+*   **Action**: Store `selectedJiraProjectKey = activeProjectContext.jira_project_key`, `selectedJiraStatusMapping = activeProjectContext.jira_status_mapping`, `selectedContextName = activeProjectContext.context_name`.
 
-### Step 3: Check Name & Propose Fixes
-*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `issue_key` (fields: summary).
-*   **Action**: Compare Jira summary with name in `tasks.md`.
-*   **Condition**: If discrepancy:
-    *   **Action**: Propose `edit_file` for `tasks.md`.
-    *   **Action**: Wait for approval.
+### Step 1: Auto-Sync tasks.md with Jira (all contexts)
+*   **Action**: (As defined in `implement-mode-map.mdc` - read `tasks.md`, parse details, check Jira, propose `tasks.md` updates for completed tasks).
+*   **Report**: "`tasks.md` sync check complete."
 
-### Step 4: Check Status/Assignee & Propose Updates
-*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `issue_key` (fields: status, assignee).
-*   **Action**: Check status. Expected: 'To Do' or 'In Development'.
-*   **Action**: Check assignee. Expected: `currentUser()`.
-*   **Condition**: If status is wrong (e.g., 'Backlog'):
-    *   **Action**: Propose `jira_transition_issue` to 'To Do'/'In Development'.
-*   **Condition**: If assignee is wrong/empty:
-    *   **Action**: Propose `jira_update_issue` to set assignee to `currentUser()`.
-*   **Condition**: If status is 'In Progress' and assignee is someone else:
-    *   **Action**: Report **STOP** (Potential conflict). Stop process.
-*   **Action**: Wait for user approval of any proposed MCP actions.
+### Step 2: Select Task from tasks.md for Creative Work (filtered by active context)
+*   **Action**: Read `tasks.md`. Filter tasks by `(Context: [selectedContextName])` and not done status `[ ]`.
+*   **Action**: Ask user: "Select a task for creative work (context '[selectedContextName]') or provide Jira Issue Key ([selectedJiraProjectKey]-XXX):\n[Filtered list]"
+*   **Condition**: If user selects line: Store `selectedTaskLine`. Parse `selectedJiraIssueKey`, `taskTitle`.
+*   **Condition**: If user provides Jira Key: Verify, store `selectedJiraIssueKey`. Try to find in `tasks.md` for `selectedTaskLine`. Fetch title from Jira.
+*   **Error Handling**: If no task, stop.
+*   **Report**: "Creative work for: [selectedJiraIssueKey] - [taskTitle] (context '[selectedContextName]')."
 
-### Step 5: Propose tasks.md Update
-*   **Condition**: If Step 4 resulted in successful Jira update(s):
-    *   **Action**: Propose `edit_file` on `tasks.md` to update status/assignee for the `issue_key`.
-    *   **Action**: Wait for approval.
+### Step 3: Check Jira Status/Assignee & Propose Updates (for selected task in its context)
+*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey`.
+*   **Action**: Let `creativeReadyStatus = selectedJiraStatusMapping.PLAN` (or a specific "Ready for Creative" status).
+*   **Action**: Let `creativeStatus = selectedJiraStatusMapping.CREATIVE` (e.g., "To Do" or "Design").
+*   **Action**: Let `implementStatus = selectedJiraStatusMapping.IMPLEMENT`.
+*   **Condition**: If current Jira status is `implementStatus` (or beyond): Report warning or STOP if assignee mismatch, as creative phase is likely complete or skipped.
+*   **Condition**: If current Jira status is NOT `creativeStatus`: Propose `mcp_mcp-atlassian_jira_transition_issue` to `creativeStatus`.
+*   **Condition**: If assignee is NOT `currentUser()`: Propose update to `currentUser()`.
+*   **Action**: Wait for approval. If changes made, set `jiraStatusOrAssigneeChanged = true`.
 
-### Step 6: Check Git Branch
-*   **Action**: Ask user: "Are you in a separate Git branch for this task ([issue_key])? If not, it's recommended to create it now (`git checkout -b ...`)."
-*   **(Optional Action):** Propose `run_terminal_cmd` for `git checkout -b feature/[issue_key]` if user agrees.
+### Step 3.1: Update `tasks.md` with Jira Status/Assignee
+*   **Condition**: If `jiraStatusOrAssigneeChanged` is true AND `selectedTaskLine` is not null:
+    *   **Action**: Propose `edit_file` for `tasks.md` to update `selectedTaskLine` (e.g., ensure status checkbox `[ ]` is accurate, no specific assignee update needed in `tasks.md` string usually).
+*   **Condition**: If `selectedTaskLine` is null (Jira key manually entered):
+    *   **Action**: Formulate new task line for `tasks.md` (Key, Title, SP from Jira desc, context `selectedContextName`).
+    *   **Action**: Propose `edit_file` to append to `tasks.md`.
+*   **Report**: "`tasks.md` and Jira task [selectedJiraIssueKey] are aligned for creative work."
 
-### Step 7: Execute Creative Design Process
-*   **Action**: Load and follow the logic from relevant creative phase rules (e.g., `creative-phase-architecture.mdc`).
-*   **Action**: Generate design documentation (e.g., in `creative-[issue_key].md`).
-*   **Instruction**: Ensure process follows structured thinking (options, pros/cons, rationale).
-*   **Report**: Inform user on progress and completion of design.
+### Step 4: Check Git Branch (using Jira key)
+*   (As previously defined, using `selectedJiraIssueKey`)
 
-### Step 8: Suggest Next Mode (IMPLEMENT)
-*   **Action**: Update `tasks.md` (via proposed `edit_file`) or `activeContext.md` to indicate creative phase completion.
-*   **Reminder**: "If **significant architectural decisions** were made during the CREATIVE phase, don't forget to update the /docs/architecture.md document. You can ask me to help with this."
-*   **Report**: "Design phase complete. Recommended next step: IMPLEMENT Mode. Enter 'IMPLEMENT' to proceed."
+### Step 5: Execute Creative Design Process
+*   (As previously defined, using `selectedJiraIssueKey` for docs like `creative-docs/creative-[selectedJiraIssueKey].md`)
 
-### Step 9: CREATIVE Mode End
+### Step 5.1: Update `tasks.md` with Creative Phase Progress/Completion
+*   **Action**: After creative work (e.g., design document `creative-[selectedJiraIssueKey].md` is created/updated):
+    *   **Action**: Propose `edit_file` for `tasks.md` to update `selectedTaskLine`. This might involve:
+        *   Adding a note like "- Creative Design Complete" to the task description part of the string.
+        *   Ensuring the status checkbox `[ ]` is still appropriate (task is not done yet, but ready for impl).
+    *   **Report**: "`tasks.md` updated to reflect creative phase completion for [selectedJiraIssueKey]."
+
+### Step 6: Suggest Next Mode (IMPLEMENT)
+*   **Action**: Update `activeContext.md` (if used) with `selectedJiraIssueKey` and link to creative docs.
+*   **Reminder**: "If significant architectural decisions for [selectedJiraIssueKey] (context '[selectedContextName]') were made, update `/docs/architecture.md`."
+*   **Report**: "Creative design for [selectedJiraIssueKey] complete. Recommended next: IMPLEMENT Mode."
+
+### Step 7: CREATIVE Mode End
 *   Wait for user command.
 
-
-*Note for AI: Remember the MCP error handling rules (retry once) and deletion of temporary files if they were used.* 
+*Note for AI: Remember MCP error handling and temp file deletion.* 

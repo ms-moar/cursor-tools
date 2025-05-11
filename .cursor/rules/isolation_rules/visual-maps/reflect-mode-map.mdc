@@ -9,65 +9,62 @@ globs: "**/reflect*/**", "**/review*/**", "**/retrospect*/**"
 alwaysApply: false
 ---
 
-# REFLECT MODE: TASK REVIEW PROCESS MAP
+# REFLECT MODE: TASK REVIEW PROCESS MAP (Multi-Context)
 
-> **TL;DR:** This visual map guides the REFLECT mode process, focusing on structured review of the implementation, documenting lessons learned, and preparing insights for future reference.
+> **TL;DR:** Guides structured review of a completed Jira task (selected from `tasks.md` for a chosen Project Context), documenting lessons learned, updating Jira, and syncing `tasks.md`.
 
 ## 🧭 REFLECT MODE PROCESS FLOW
 
 ```mermaid
 graph TD
-    Start["START REFLECT MODE"] --> ReadTasks["Read tasks.md<br>and progress.md"]
+    Start["START REFLECT MODE"] --> ReadGlobalConfig["Step 0.1: Read Global Configs"]
+    ReadGlobalConfig --> SelectActiveContext["Step 0.2: Select Active Project Context"]
+    SelectActiveContext --> AutoSyncTasksMD["Step 1: Auto-Sync tasks.md with Jira (all contexts)"]
+    AutoSyncTasksMD --> GetJiraTask["Step 2: Select Task from tasks.md for Reflection (filtered by active context)"]
+
+    GetJiraTask --> VerifyImplement{"Implementation Complete for [selectedJiraIssueKey]? (Check Jira Status or progress.md)"}
+    VerifyImplement -->|"No"| ReturnImplement["Return to<br>IMPLEMENT Mode for [selectedJiraIssueKey]"]
+    VerifyImplement -->|"Yes"| AssessLevel{"Determine<br>Complexity Level (from Jira for [selectedJiraIssueKey] or user)"}
     
-    %% Initial Assessment
-    ReadTasks --> VerifyImplement{"Implementation<br>Complete?"}
-    VerifyImplement -->|"No"| ReturnImplement["Return to<br>IMPLEMENT Mode"]
-    VerifyImplement -->|"Yes"| AssessLevel{"Determine<br>Complexity Level"}
+    %% Level-Based Reflection (focused on selectedJiraIssueKey)
+    AssessLevel -->|"Level 1"| L1Reflect["LEVEL 1 REFLECTION"]
+    AssessLevel -->|"Level 2"| L2Reflect["LEVEL 2 REFLECTION"]
+    AssessLevel -->|"Level 3"| L3Reflect["LEVEL 3 REFLECTION"]
+    AssessLevel -->|"Level 4"| L4Reflect["LEVEL 4 REFLECTION"]
     
-    %% Level-Based Reflection
-    AssessLevel -->|"Level 1"| L1Reflect["LEVEL 1 REFLECTION<br>Level1/reflection-basic.md"]
-    AssessLevel -->|"Level 2"| L2Reflect["LEVEL 2 REFLECTION<br>Level2/reflection-standard.md"]
-    AssessLevel -->|"Level 3"| L3Reflect["LEVEL 3 REFLECTION<br>Level3/reflection-comprehensive.md"]
-    AssessLevel -->|"Level 4"| L4Reflect["LEVEL 4 REFLECTION<br>Level4/reflection-advanced.md"]
+    L1Reflect --> L1Review["Review<br>Bug Fix ([selectedJiraIssueKey])"]
+    L1Review --> L1Document["Document<br>Solution in reflection.md"]
+    L1Document --> L1JiraUpdate["Update Jira Task Status for [selectedJiraIssueKey]<br>to ReflectCompleteStatus (from context)"]
     
-    %% Level 1 Reflection (Quick)
-    L1Reflect --> L1Review["Review<br>Bug Fix"]
-    L1Review --> L1Document["Document<br>Solution"]
-    L1Document --> L1Update["Update<br>tasks.md"]
+    L2Reflect --> L2Review["Review<br>Enhancement ([selectedJiraIssueKey])"]
+    L2Review --> L2WWW["Document What Went Well"]
+    L2WWW --> L2Challenges["Document Challenges"]
+    L2Challenges --> L2Lessons["Document Lessons Learned"]
+    L2Lessons --> L2JiraUpdate["Update Jira Task Status for [selectedJiraIssueKey]<br>to ReflectCompleteStatus (from context)"]
     
-    %% Level 2 Reflection (Standard)
-    L2Reflect --> L2Review["Review<br>Enhancement"]
-    L2Review --> L2WWW["Document<br>What Went Well"]
-    L2WWW --> L2Challenges["Document<br>Challenges"]
-    L2Challenges --> L2Lessons["Document<br>Lessons Learned"]
-    L2Lessons --> L2Update["Update<br>tasks.md"]
-    
-    %% Level 3-4 Reflection (Comprehensive)
-    L3Reflect & L4Reflect --> L34Review["Review Implementation<br>& Creative Phases"]
-    L34Review --> L34Plan["Compare Against<br>Original Plan"]
-    L34Plan --> L34WWW["Document<br>What Went Well"]
-    L34WWW --> L34Challenges["Document<br>Challenges"]
-    L34Challenges --> L34Lessons["Document<br>Lessons Learned"]
-    L34Lessons --> L34ImproveProcess["Document Process<br>Improvements"]
-    L34ImproveProcess --> L34Update["Update<br>tasks.md"]
+    L3Reflect & L4Reflect --> L34Review["Review Implementation & Creative Phases<br>(for [selectedJiraIssueKey])"]
+    L34Review --> L34Plan["Compare Against Original Plan"]
+    L34Plan --> L34WWW["Document What Went Well"]
+    L34WWW --> L34Challenges["Document Challenges"]
+    L34Challenges --> L34Lessons["Document Lessons Learned"]
+    L34Lessons --> L34ImproveProcess["Document Process Improvements"]
+    L34ImproveProcess --> L34JiraUpdate["Update Jira Task Status for [selectedJiraIssueKey]<br>to ReflectCompleteStatus (from context)"]
     
     %% Completion & Transition
-    L1Update & L2Update & L34Update --> CreateReflection["Create<br>reflection.md"]
-    CreateReflection --> UpdateSystem["Update System<br>Documentation"]
-    UpdateSystem --> VerifyReview["Verify<br>Reflection"]
-    VerifyReview -->|"Yes"| ReflectComplete[\"REFLECT COMPLETE<br>Ready for ARCHIVE\"]
+    L1JiraUpdate & L2JiraUpdate & L34JiraUpdate --> UpdateTasksMDWithReflection["Step X.1: Update tasks.md with Reflection Completion"]
+    UpdateTasksMDWithReflection --> CreateReflectionDoc["Create/Update reflection-[selectedJiraIssueKey].md"]
+    CreateReflectionDoc --> UpdateSystemDocs["Update System Documentation (if needed, for context '[activeProjectContext.context_name]')"]
+    UpdateSystemDocs --> VerifyReview["Verify<br>Reflection Complete"]
+    VerifyReview -->|"Yes"| ReflectComplete[\"REFLECT COMPLETE for [selectedJiraIssueKey]<br>Ready for ARCHIVE\"]
 
-    %% JIRA INTEGRATION START
-    ReflectComplete --> UpdateJiraStatus[\"Update Jira Status to 'Done'\"]
-    UpdateJiraStatus --> SuggestArchive[\"Suggest ARCHIVE Mode\"]
-    %% JIRA INTEGRATION END
+    ReflectComplete --> SuggestArchive[\"Suggest ARCHIVE Mode for [selectedJiraIssueKey]\"]
 
-    VerifyReview -->|"No"| ReviseWork[\"Revise Work or<br>Implementation\"]
-    ReviseWork --> ReviewProcess
+    VerifyReview -->|"No"| ReviseWork[\"Revise Work or<br>Reflection Documentation\"]
+    ReviseWork --> L34Review %% Or appropriate review starting point
 
     style ReflectComplete fill:#10b981,stroke:#059669,color:white
-    %% JIRA Node Styles
     style UpdateJiraStatus fill:#5e72e4,stroke:#324cdd,color:white
+    style UpdateTasksMDWithReflection fill:#FFD700,stroke:#B8860B,color:black
     style SuggestArchive fill:#10b981,stroke:#059669,color:white
 ```
 
@@ -91,20 +88,14 @@ graph TD
     Header --> Summary --> WWW --> Challenges --> Lessons --> ProcessImp --> TechImp --> NextSteps
 ```
 
-## 📊 REQUIRED FILE STATE VERIFICATION
+## 📊 REQUIRED FILE STATE VERIFICATION (Adapted)
 
-Before reflection can begin, verify file state:
-
-```mermaid
-graph TD
-    Start["File State<br>Verification"] --> CheckTasks{"tasks.md has<br>implementation<br>complete?"}
-    
-    CheckTasks -->|"No"| ErrorImplement["ERROR:<br>Return to IMPLEMENT Mode"]
-    CheckTasks -->|"Yes"| CheckProgress{"progress.md<br>has implementation<br>details?"}
-    
-    CheckProgress -->|"No"| ErrorProgress["ERROR:<br>Update progress.md first"]
-    CheckProgress -->|"Yes"| ReadyReflect["Ready for<br>Reflection"]
-```
+*   **Instruction for AI**: Verification focuses on:
+    1.  `activeProjectContext` is selected.
+    2.  `tasks.md` exists.
+    3.  A task (`selectedTaskLine`) is chosen from `tasks.md` for reflection, belonging to `activeProjectContext`.
+    4.  `selectedJiraIssueKey` is parsed.
+    5.  Jira task `selectedJiraIssueKey` (in project `selectedJiraProjectKey`) is in a state indicating implementation/QA completion (e.g., status from `activeProjectContext.jira_status_mapping.IMPLEMENT` or a `QA_PASSED` status).
 
 ## 🔍 IMPLEMENTATION REVIEW APPROACH
 
@@ -192,80 +183,74 @@ graph TD
     end
 ```
 
-## 📋 TASKS.MD UPDATE FORMAT
+## 📋 TASKS.MD UPDATE FORMAT (Adapted)
 
-During reflection, update tasks.md with:
+*   **Instruction for AI**: After Jira status is updated to reflect completion (e.g., to `activeProjectContext.jira_status_mapping.REFLECT`), the corresponding line in `tasks.md` for `selectedJiraIssueKey` should be updated. This might involve changing the status checkbox `[ ]` to `[x]` if REFLECT is considered a final local step before ARCHIVE, or adding a note like "- Reflection Complete" to the description part of the string.
 
-```
-## Status
-- [x] Initialization complete
-- [x] Planning complete
-[For Level 3-4:]
-- [x] Creative phases complete
-- [x] Implementation complete
-- [x] Reflection complete
-- [ ] Archiving
+## 📊 REFLECTION VERIFICATION CHECKLIST (Adapted)
 
-## Reflection Highlights
-- **What Went Well**: [Key successes]
-- **Challenges**: [Key challenges]
-- **Lessons Learned**: [Key lessons]
-- **Next Steps**: [Follow-up actions]
-```
+*   **Instruction for AI**: Checklist should verify:
+    1.  Implementation for `selectedJiraIssueKey` (in `activeProjectContext.context_name`) reviewed.
+    2.  Reflection document `reflection-[selectedJiraIssueKey].md` completed.
+    3.  Jira task `selectedJiraIssueKey` status updated to `activeProjectContext.jira_status_mapping.REFLECT`.
+    4.  `tasks.md` entry for `selectedJiraIssueKey` updated to reflect reflection completion.
 
-## 📊 REFLECTION VERIFICATION CHECKLIST
+## 🔄 MODE TRANSITION NOTIFICATION (Adapted)
 
-```
-✓ REFLECTION VERIFICATION
-- Implementation thoroughly reviewed? [YES/NO]
-- What Went Well section completed? [YES/NO]
-- Challenges section completed? [YES/NO]
-- Lessons Learned section completed? [YES/NO]
-- Process Improvements identified? [YES/NO]
-- Technical Improvements identified? [YES/NO]
-- Next Steps documented? [YES/NO]
-- reflection.md created? [YES/NO]
-- tasks.md updated with reflection status? [YES/NO]
-
-→ If all YES: Reflection complete - ready for ARCHIVE mode
-→ If any NO: Complete missing reflection elements
-```
-
-## 🔄 MODE TRANSITION NOTIFICATION
-
-When reflection is complete, notify user with:
-
-```
-## REFLECTION COMPLETE
-
-✅ Implementation thoroughly reviewed
-✅ Reflection document created
-✅ Lessons learned documented
-✅ Process improvements identified
-✅ tasks.md updated with reflection status
-
-→ NEXT RECOMMENDED MODE: ARCHIVE MODE
-```
+*   **Instruction for AI**: Notification should confirm reflection for `selectedJiraIssueKey` (context '[activeProjectContext.context_name]'), mention `tasks.md` and Jira updates, suggest ARCHIVE mode.
 
 ## 🤔 DETAILED REFLECTION STEPS
 
-### Step 5: Finalize Review and Prepare for Archiving
+### Step 0.1: Read Global Configs
+*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, `tasks.md` format.
 
-- **Configuration Reading**:
-    - **Action**: Read the `integration_config.md` file to get Jira configuration.
-    - **Data**: Extract `Project Key` and Jira status for REFLECT phase (e.g., `Done`).
+### Step 0.2: Select Active Project Context
+*   **Action**: (As defined previously - user selects `activeProjectContext`).
+*   **Action**: Store `selectedJiraProjectKey`, `selectedJiraStatusMapping`, `selectedContextName`.
 
-- **Consolidate Feedback**: Ensure all review notes and potential follow-up actions are documented.
-- **Verify Completion**: Confirm that the reflection phase for the task is complete.
-- **Update Jira Status**:
-    - **Action**: Read `tasks.md` to find the current task and its Jira ID.
-    - **Action**: Call `mcp_mcp-atlassian_jira_update_issue`.
-    - **Parameters**:
-        - `issue_key`: The Jira ID retrieved from `tasks.md`.
-        - `fields`: `'{"status": {"name": "$STATUS_NAME"}}'` where `$STATUS_NAME` is from the configuration (e.g., "Done").
-        - *Note: May require `transition_issue` if direct update fails*.
-    - **Error Handling**: Retry once on MCP failure, then report and ask user.
-- **Transition**: Signal completion and suggest switching to ARCHIVE mode.
+### Step 1: Auto-Sync tasks.md with Jira (all contexts)
+*   **Action**: (As defined in `implement-mode-map.mdc` - read `tasks.md`, parse details, check Jira, propose `tasks.md` updates for completed/misaligned tasks).
+*   **Report**: "`tasks.md` sync check complete."
+
+### Step 2: Select Task from tasks.md for Reflection (filtered by active context) (was Step 0.3)
+*   **Action**: Read `tasks.md`. Filter tasks by `(Context: [selectedContextName])` and status indicating ready for reflection (e.g., not `[x]`, or a specific prior status like "Implemented").
+*   **Action**: Ask user: "Select a task for reflection (context '[selectedContextName]') or provide Jira Issue Key ([selectedJiraProjectKey]-XXX):\n[Filtered list]"
+*   **Condition**: If user selects line: Store `selectedTaskLine`. Parse `selectedJiraIssueKey`, `taskTitle`.
+*   **Condition**: If user provides Jira Key: Verify, store `selectedJiraIssueKey`. Try to find in `tasks.md` for `selectedTaskLine`. Fetch title from Jira.
+*   **Error Handling**: If no task, stop.
+*   **Report**: "Performing reflection for: [selectedJiraIssueKey] - [taskTitle] (context '[selectedContextName]')."
+*   *(Fetch task details from Jira for context, especially current status)*
+
+### Step (Verify Implementation Complete - Part of old Step 0.3 / Initial Assessment)
+*   **Action**: Check current status of `selectedJiraIssueKey` in Jira.
+*   **Action**: Let `implementationCompleteStatus` be `selectedJiraStatusMapping.IMPLEMENT` (or a QA_PASSED status if QA is a pre-requisite).
+*   **Condition**: If Jira status is NOT `implementationCompleteStatus` (or a later one like `REFLECT` or `ARCHIVE`):
+    *   **Report**: "Task [selectedJiraIssueKey] is not yet marked as implementation complete in Jira (current status: [JiraStatus]). Please complete IMPLEMENT or QA mode first."
+    *   **Action**: Offer to return to IMPLEMENT mode or stop REFLECT mode.
+
+### Step (Main Reflection Logic - L1 to L4 based on complexity of [selectedJiraIssueKey])
+*   Determine complexity for `selectedJiraIssueKey` (from SP in `selectedTaskLine` or Jira description, or ask user).
+*   Perform level-based reflection (L1Review, L2WWW, L34Review etc.) focusing on `selectedJiraIssueKey`.
+*   Document findings in a file like `reflection-docs/reflection-[selectedJiraIssueKey].md`.
+
+### Step (Update Jira Status)
+*   **Action**: Let `reflectCompleteStatus = selectedJiraStatusMapping.REFLECT`.
+*   **Action**: Ask user: "Reflection for [selectedJiraIssueKey] documented. Update Jira status to '[reflectCompleteStatus]'?"
+*   **Condition**: If user agrees:
+    *   **Action**: Call `mcp_mcp-atlassian_jira_transition_issue` (or `update_issue`) for `selectedJiraIssueKey` in `selectedJiraProjectKey` to `reflectCompleteStatus`.
+    *   **Report**: "Jira Task [selectedJiraIssueKey] status updated to '[reflectCompleteStatus]'."
+    *   Set `jiraStatusUpdatedInReflect = true`.
+
+### Step (Update `tasks.md` with Reflection Completion)
+*   **Condition**: If `jiraStatusUpdatedInReflect` is true AND `selectedTaskLine` is not null:
+    *   **Action**: Formulate updated task line for `tasks.md`. The status checkbox `[ ]` might remain if ARCHIVE is the final step, or change to `[x]` if REFLECT is considered locally final for this file. Add a note like "- Reflection Complete" or update description if appropriate.
+    *   **Action**: Propose `edit_file` for `tasks.md` to replace `selectedTaskLine` with the updated line.
+    *   **Report**: "`tasks.md` updated for [selectedJiraIssueKey] to reflect completion of reflection."
+*   **Condition**: If `selectedTaskLine` was null and Jira status updated (task was handled only via Jira ID):
+    *   **Action**: Consider if a new line for `tasks.md` should be proposed here if it wasn't added during IMPLEMENT mode.
+
+### Step (Transition to ARCHIVE)
+*   **Report**: "Reflection for [selectedJiraIssueKey] complete. Recommended next: ARCHIVE Mode."
 
 ```
 ✓ REFLECT COMPLETE
