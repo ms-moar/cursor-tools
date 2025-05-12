@@ -83,7 +83,7 @@ This implementation will continue to be refined and optimized as Claude's capabi
 Simply clone this repository into your project directory:
 
 ```
-git clone https://github.com/vanzan01/cursor-memory-bank.git
+git clone https://github.com/ms-moar/cursor-tools.git
 
 ```
 
