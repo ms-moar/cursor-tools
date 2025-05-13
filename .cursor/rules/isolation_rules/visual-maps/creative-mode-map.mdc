@@ -17,7 +17,7 @@ graph TD
     AutoSyncTasksMD --> TaskSelect["Step 2: Select Task from tasks.md for Creative Work (filtered by active context)"]
     TaskSelect --> JiraStatusAssigneeCheck["Step 3: Check Jira Status/Assignee & Propose Updates (for selected task in its context)"]
     JiraStatusAssigneeCheck --> UpdateTasksMDWithJiraStatus["Step 3.1: Update tasks.md with Jira Status/Assignee"]
-    UpdateTasksMDWithJiraStatus --> GitCheck["Step 4: Check Git Branch (using Jira key)"]
+    UpdateTasksMDWithJiraStatus --> GitCheck["Step 4: Check/Propose Git Branch for Task (considering Epic branch)"]
     GitCheck --> CreativeWork["Step 5: Execute Creative Design Process (for selected Jira task)"]
     CreativeWork --> UpdateTasksMDWithCreativeProgress["Step 5.1: Update tasks.md with Creative Phase Progress/Completion"]
     UpdateTasksMDWithCreativeProgress --> SuggestNext["Step 6: Suggest Next Mode (IMPLEMENT)"]
@@ -191,8 +191,24 @@ Use these visual markers for creative phases:
     *   **Action**: Propose `edit_file` to append to `tasks.md`.
 *   **Report**: "`tasks.md` and Jira task [selectedJiraIssueKey] are aligned for creative work."
 
-### Step 4: Check Git Branch (using Jira key)
-*   (As previously defined, using `selectedJiraIssueKey`)
+### Step 4: Check/Propose Git Branch for Task (considering Epic branch)
+*   **Action**: Fetch parent Epic key for `selectedJiraIssueKey`. Let this be `parentEpicKey` (can be null).
+*   **Action**: Let `defaultGitBranch = activeProjectContext.gitlab_default_branch`.
+*   **Action**: Initialize `baseBranch = defaultGitBranch`.
+*   **Condition**: If `parentEpicKey` is not null:
+    *   **Action**: Let `epicBranchName = "epic/[parentEpicKey]"`.
+    *   **Action**: (Optional - Advanced: Use `git branch -r --list origin/[epicBranchName]` or similar to check if remote epic branch exists. For simplicity, we can assume if an epic branch was created in PLAN, it might exist locally if user pulled, or we just attempt to base off it. A simpler approach is to always ask user if they know of an epic branch).
+    *   **Action**: Ask user: "Is task [selectedJiraIssueKey] part of Epic [parentEpicKey]? And does a Git branch '[epicBranchName]' already exist for this Epic? If yes, we can base the new task branch on it."
+    *   **Condition**: If user confirms `epicBranchName` exists and should be used:
+        *   Set `baseBranch = epicBranchName`.
+        *   **Action**: (Optional: Propose `git checkout [epicBranchName]` and `git pull` to ensure it's up-to-date if user isn't already on it).
+*   **Action**: Let `featureBranchName = "feature/[selectedJiraIssueKey]-creative"`.
+*   **Action**: Ask user: "It is recommended to work in a dedicated Git branch. Propose creating/switching to branch '[featureBranchName]' from '[baseBranch]'?"
+*   **Condition**: If user agrees:
+    *   **Action**: Propose `run_terminal_cmd` with `git checkout -b [featureBranchName] [baseBranch]`.
+    *   **(Error Handling Note for AI)**: If `baseBranch` (especially an epic branch) doesn't exist locally, `git checkout -b` will fail if `baseBranch` is not `defaultGitBranch`. The AI should handle this, perhaps by falling back to `defaultGitBranch` or asking the user to create/pull the epic branch first.
+    *   **Action**: Wait for approval.
+*   **Report**: "Git branch '[featureBranchName]' proposed/created from '[baseBranch]'."
 
 ### Step 5: Execute Creative Design Process
 *   (As previously defined, using `selectedJiraIssueKey` for docs like `creative-docs/creative-[selectedJiraIssueKey].md`)

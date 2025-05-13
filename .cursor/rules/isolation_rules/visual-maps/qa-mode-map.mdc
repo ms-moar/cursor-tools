@@ -106,24 +106,34 @@ graph TD
 
 ### Step 3: Execute Phase-Specific Validation (within selected context)
 *   **Action**: Run validation steps specific to the detected phase for `activeProjectContext` or `qaTargetJiraIssueKey`.
-*   **IMPLEMENT Phase - DevOps Pipeline Validation (using `activeProjectContext` settings)**:
-    *   Check GitLab CI config (e.g., `.gitlab-ci.yml` in the root or context-specific path if defined).
-    *   Validate CI config: `python devops-tools/gitlab/gitlab_tools.py validate-ci-config .gitlab-ci.yml --repo_url [activeProjectContext.gitlab_repo_url]` (if repo_url is available in context).
-    *   Check last pipeline status for `activeProjectContext.gitlab_default_branch`: `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_repo_url]`.
-    *   If `activeProjectContext.vercel_project_id` exists, ask user if Vercel is used. If yes, validate `vercel.json` and optionally check Vercel deployment status for this context.
+*   **Condition**: If detected phase is IMPLEMENT (or task is in an implementation-like status):
+    *   **Action**: Perform **DevOps Pipeline Validation** (using `activeProjectContext` settings):
+        *   Check GitLab CI config (e.g., `.gitlab-ci.yml` in the root or `activeProjectContext.gitlab_ci_config_path` if defined).
+        *   Validate CI config: `python devops-tools/gitlab/gitlab_tools.py validate-ci-config [path_to_ci_config] --repo_url [activeProjectContext.gitlab_project_id]`.
+        *   Check last pipeline status for `activeProjectContext.gitlab_default_branch`: `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_project_id]`.
+        *   **Condition**: If `activeProjectContext.vercel_project_id` is defined and not empty:
+            *   **Action**: Ask user: "Project '[activeProjectContext.context_name]' is configured for Vercel (ID: [activeProjectContext.vercel_project_id]). Would you like to validate Vercel configuration and deployment status?"
+            *   **Condition**: If user agrees:
+                *   Validate `vercel.json` (in root or `activeProjectContext.vercel_config_path` if defined).
+                *   Optionally check Vercel deployment status for this context: `python devops-tools/vercel/vercel_tools.py status --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]` (if team_id configured).
 
 ### Step 5: Report Results and Prepare for Transition (using selected context)
-*   **Configuration Reading**: Use `selectedJiraProjectKey` and `selectedJiraStatusMapping`.
+*   **Configuration Reading**: Use `selectedJiraProjectKey` and `selectedJiraStatusMapping` from `activeProjectContext`.
 *   **Generate Report**: Mention `activeProjectContext.context_name` and `qaTargetJiraIssueKey` (if any).
 *   **If Successful**: ✅
-    *   **Update Jira Status (if `qaTargetJiraIssueKey` is set)**:
-        *   Let `qaPassStatus` be the appropriate status from `selectedJiraStatusMapping` (e.g., value for `VAN_QA` or a specific `QA_PASSED` key).
-        *   Call `mcp_mcp-atlassian_jira_transition_issue` (or `update_issue`) for `qaTargetJiraIssueKey` to `qaPassStatus`.
-        *   Report: "Jira Task [qaTargetJiraIssueKey] in project [selectedJiraProjectKey] status updated to [qaPassStatus]."
-    *   **Update `tasks.md` (if `qaTargetJiraIssueKey` is set and `qaSelectedTaskLine` exists)**:
-        *   Propose `edit_file` for `tasks.md` to update the status of `qaSelectedTaskLine` (e.g., change checkbox or add note like "- QA Passed").
-    *   **Transition**: Suggest next mode.
-*   **If Failed**: ❌ (Report failure, BUILD mode blocked for `qaTargetJiraIssueKey` if set).
+    *   **Update Jira Status (Only if `qaTargetJiraIssueKey` is set)**:
+        *   **Action**: Let `qaPassStatusKey = "QA_PASS"` (or a similar key defined in `integration_config.md` for QA success).
+        *   **Action**: Let `jiraTargetStatus = selectedJiraStatusMapping[qaPassStatusKey]` (e.g., the actual Jira status like "Ready for UAT" or "Done").
+        *   **Condition**: If `jiraTargetStatus` is found:
+            *   **Action**: Call `mcp_mcp-atlassian_jira_transition_issue` (or `update_issue`) for `qaTargetJiraIssueKey` to `jiraTargetStatus`.
+            *   **Report**: "Jira Task [qaTargetJiraIssueKey] in project [selectedJiraProjectKey] status updated to [jiraTargetStatus]."
+        *   **Condition**: Else (status key not found in mapping):
+            *   **Report**: "Warning: Jira status key '[qaPassStatusKey]' not found in mapping for context '[selectedContextName]'. Jira status not updated."
+    *   **Update `tasks.md` (Only if `qaTargetJiraIssueKey` is set and `qaSelectedTaskLine` exists)**:
+        *   **Action**: Propose `edit_file` for `tasks.md` to update `qaSelectedTaskLine` by appending a note like "- QA Passed." to its description. The checkbox `[ ]` might not change to `[x]` until ARCHIVE phase, depending on workflow.
+        *   **Report**: "`tasks.md` updated for [qaTargetJiraIssueKey] to reflect QA Passed."
+    *   **Transition**: Suggest next mode (e.g., REFLECT or specific next step based on context workflow).
+*   **If Failed**: ❌ (Report failure. Next steps like BUILD might be blocked for `qaTargetJiraIssueKey` if set, or for the general phase).
 
 *Instruction for AI: Sections like `UNIVERSAL MEMORY BANK VERIFICATION`, `TASK TRACKING VERIFICATION` (their old diagrammatic representations), `UNIVERSAL VALIDATION COMMAND EXECUTION`, specific `DEPENDENCY/CONFIGURATION/ENVIRONMENT/MINIMAL BUILD TEST PROCESS` sections, and report formats need thorough review. They must be adapted to use `tasks.md` as a multi-context list and perform checks against Jira within the `activeProjectContext`. Many old commands targeting a generic `tasks.md` or `memory-bank/` directory are no longer valid without context filtering.*
 
@@ -283,14 +293,14 @@ This retains the original QA validation from the previous version:
 
 ```mermaid
 graph TD
-    IMPLEMENT["IMPLEMENT Phase<br>Validation"] --> ReadDesign["Read Design Decisions"]
-    ReadDesign --> FourChecks["Four-Point Technical<br>Validation"]
+    IMPLEMENT["IMPLEMENT Phase<br>Validation (as part of general QA)"] --> ReadDesign["Read Design Decisions"]
+    ReadDesign --> FourChecks["Perform Technical<br>Checks (Dependencies, Config, Env, Build)"]
     
     FourChecks --> DepCheck["1️⃣ Dependency<br>Verification"]
     DepCheck --> ConfigCheck["2️⃣ Configuration<br>Validation"]
     ConfigCheck --> EnvCheck["3️⃣ Environment<br>Validation"]
     EnvCheck --> MinBuildCheck["4️⃣ Minimal Build<br>Test"]
-    MinBuildCheck --> DevOpsCheck["5️⃣ DevOps Pipeline<br>Validation"]
+    MinBuildCheck --> DevOpsCheck["5️⃣ DevOps Pipeline<br>Validation (NEW - see Step 3 above)"]
     
     DevOpsCheck --> IMPLEMENTConsistency{"Technical<br>Prerequisites Met?"}
     IMPLEMENTConsistency -->|"Yes"| PassIMPLEMENT["✅ IMPLEMENT Phase<br>Validation Passed"]
@@ -307,34 +317,7 @@ graph TD
 ## 💻 5️⃣ DEVOPS PIPELINE VALIDATION PROCESS
 
 This validation point tests the integration with GitLab CI/CD pipeline and optionally with Vercel deployment.
-
-### Command Execution:
-
-```bash
-# Check GitLab CI configuration
-test -f .gitlab-ci.yml && echo "✅ GitLab CI config found" || echo "❌ GitLab CI config missing"
-
-# Validate GitLab CI configuration syntax
-python devops-tools/gitlab/gitlab_tools.py validate-ci-config .gitlab-ci.yml
-
-# Check last pipeline status
-python devops-tools/gitlab/gitlab_tools.py check-pipeline main
-
-# Optional: Validate Vercel configuration
-test -f vercel.json && echo "✅ Vercel config found" || echo "⚠️ Vercel config not found (optional)"
-```
-
-### Validation Criteria:
-- GitLab CI configuration must exist and be syntactically valid
-- Last CI pipeline for the main branch should be successful
-- If Vercel is used, configuration should be valid
-- Project structure should match CI/CD expectations
-
-### Common Fixes:
-- Fix GitLab CI configuration syntax errors
-- Address failed pipeline steps
-- Update project structure to match CI/CD requirements
-- Configure Vercel properly if deployment is needed
+*This section is now integrated into Step 3 if the detected phase is IMPLEMENT.*
 
 ## 📋 UNIVERSAL VALIDATION COMMAND EXECUTION
 
@@ -528,12 +511,13 @@ grep -i "script.*src=" index.html
 │                                                                               │
 │ [Technical validation section shown only for IMPLEMENT phase]                  │
 │                                                                               │
-│ 4️⃣ MINIMAL BUILD TEST                                                          │
-│    ✓ Build Process: [Status]                                                  │
-│    ✓ Entry Points: [Status]                                                   │
-│    ✓ HTML References: [Status]                                                │
+│ [OLD 4 Point Check - if still relevant as sub-parts of IMPLEMENT phase validation]
+│ │ DEPENDENCY VERIFICATION: [Status]
+│ │ CONFIGURATION VALIDATION: [Status]
+│ │ ENVIRONMENT VALIDATION: [Status]
+│ │ MINIMAL BUILD TEST: [Status]
 │                                                                               │
-│ 5️⃣ DEVOPS PIPELINE VALIDATION                                                 │
+│ 5️⃣ DEVOPS PIPELINE VALIDATION (Executed if IMPLEMENT phase)                    │
 │    ✓ GitLab CI Config: [Status]                                               │
 │    ✓ Pipeline Status: [Status]                                                │
 │    ✓ Vercel Configuration: [Status] (if applicable)                           │
@@ -624,11 +608,10 @@ This enhanced QA mode serves as a "quality guardian" throughout the development 
 
 ### Step 3: Execute Phase-Specific Validation
 - **Action**: Run validation steps specific to the detected phase.
-- **Action**: For IMPLEMENT phase, perform technical validation including dependency, configuration, environment, and build checks.
-- **Action**: For IMPLEMENT phase, execute GitLab CI/CD pipeline validation:
-  - **Action**: Check for existence and validity of GitLab CI configuration.
-  - **Action**: Validate CI/CD pipeline status using `python devops-tools/gitlab/gitlab_tools.py`.
-  - **Action**: Optional: Check Vercel configuration if user confirms Vercel is used for deployments.
+- **Action**: For IMPLEMENT phase, perform technical validation including dependency, configuration, environment, and build checks AS WELL AS **DevOps Pipeline Validation** as detailed above (using `activeProjectContext`):
+  - **Action**: Check for existence and validity of GitLab CI configuration (e.g. `[activeProjectContext.gitlab_ci_config_path]` or default `.gitlab-ci.yml`).
+  - **Action**: Validate CI/CD pipeline status using `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_project_id]`.
+  - **Action**: If `activeProjectContext.vercel_project_id` is set, ask about Vercel, then optionally validate `vercel.json` (e.g. `[activeProjectContext.vercel_config_path]` or default) and check deployment status `python devops-tools/vercel/vercel_tools.py status --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]`.
 
 ### Step 4: Compile Results and Generate Report
 - **Action**: Compile all validation results into a comprehensive report.

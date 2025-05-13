@@ -1,5 +1,120 @@
 # MEMORY BANK PLAN MODE
 
+This document provides instructions for the **PLAN Mode**. PLAN mode is used for detailed task planning, breaking down work, estimating effort (Story Points), and preparing for implementation or creative design phases. It leverages AI for plan generation and SP estimation, and integrates with Jira for task creation and updates within a selected Project Context.
+
+---
+
+## 🚀 STARTING PLAN MODE
+
+When you activate PLAN mode:
+
+1.  **AI Reads Configuration**: I will first read `integration_config.md` to understand available project contexts and global settings (including SP estimation guidelines and `tasks.md` format).
+2.  **Select Project Context**: 
+    *   I will ask you: "For which project context are we planning? Please select from: [List of context names from `integration_config.md`]."
+    *   The selected context (`activeProjectContext`) will determine the Jira project, Confluence space, DevOps settings, and task filtering in `tasks.md`.
+3.  **Automatic Jira Task Synchronization (for `activeProjectContext`)**: 
+    *   I will read `tasks.md` and check tasks associated with `activeProjectContext.context_name` against their status in Jira (using `activeProjectContext.jira_project_key`).
+    *   If I find discrepancies (e.g., a task is marked done in Jira but not locally), I will propose an edit to `tasks.md`.
+4.  **Check for Existing In-Progress Tasks (for `activeProjectContext`)**:
+    *   I will query Jira (for `activeProjectContext.jira_project_key`) for tasks already assigned to you (`currentUser()`) and in a status like "In Progress" or "To Do" (based on `activeProjectContext.jira_status_mapping`).
+    *   If such tasks are found, I will list them and ask if you'd like to continue working on one of them (potentially transitioning to CREATIVE or IMPLEMENT mode) or if you prefer to plan a new task.
+
+---
+
+## 📝 PLANNING A NEW TASK (if selected)
+
+If you choose to plan a new task:
+
+1.  **Identify Task for Planning**:
+    *   You can provide a Jira Issue Key (e.g., `[activeProjectContext.jira_project_key]-XXX`).
+    *   Alternatively, I can search Jira (for `activeProjectContext.jira_project_key`) for tasks suitable for planning (e.g., in 'Backlog' status) and you can select one.
+    *   Let the selected task be `selectedJiraIssueKey` with title `selectedTaskTitle`.
+2.  **LLM-Powered Plan & SP Estimation (AI Action)**:
+    *   I will use my LLM capabilities to analyze `selectedTaskTitle` and its description (fetched from Jira for `selectedJiraIssueKey`).
+    *   I will generate a detailed plan, including potential Epics, Sprints (if applicable for complexity), and a breakdown of specific, actionable sub-tasks. 
+    *   **Crucially, I will provide a FINAL Story Point (SP) estimation for each new task/sub-task generated.** This estimation is based on complexity, using the formula in `integration_config.md` as a guideline (e.g., `1 SP = 8 dev hours = 10 AI minutes`).
+    *   I will present this plan to you for review (Epics -> Sprints -> Tasks with Name, Description, SP).
+3.  **Jira Issue Creation/Update (Semi-Automated)**:
+    *   Based on the AI-generated plan and SPs, I will propose to:
+        *   Create a new Epic in Jira (for `activeProjectContext.jira_project_key`) if the plan involves a new Epic. The Epic's description will include its total SP and a list of its tasks if it's a "small epic" (e.g., <7 SP total, tasks not created individually in Jira). The context name will also be noted in the description.
+        *   Create new individual tasks (Stories, Tasks, etc., based on `activeProjectContext.jira_default_issue_type`) in Jira under the relevant Epic (if any). The description of each Jira task **MUST include its SP value** (e.g., "Story Points: X SP") and the `activeProjectContext.context_name`.
+    *   You will need to **approve** these creation steps via MCP tool calls.
+4.  **Update Local `tasks.md`**: 
+    *   After successful Jira issue creation(s), I will propose edits to `tasks.md` to add these new tasks. Each line will follow the format: `- [ ] **[[activeProjectContext.jira_project_key]:JIRA_ID]** Title - **SP: X** (Context: [activeProjectContext.context_name])`.
+    *   I will also check if the main `selectedJiraIssueKey` (if it was an existing one being planned out) needs its description or SP updated in `tasks.md`.
+5.  **Link to Epic & Sprint (Optional, Semi-Automated)**:
+    *   If a new Epic was created, I will ensure sub-tasks are linked to it in Jira.
+    *   I can check for an active Sprint for `activeProjectContext.jira_project_key` and propose linking the planned tasks to it, if you wish.
+6.  **Update Jira Task Status (for `selectedJiraIssueKey`)**: 
+    *   Once planning is complete, I will propose updating the status of `selectedJiraIssueKey` in Jira to a status indicating planning is done (e.g., `activeProjectContext.jira_status_mapping.PLAN` which might map to 'To Do' or 'Ready for Development').
+    *   This requires your approval via MCP.
+    *   I will then propose an edit to `tasks.md` to reflect this status change locally.
+7.  **Propose Epic/Phase Git Branch (Optional)**:
+    *   If one or more Epics were processed (created or planned under) during this session, I will ask you for each Epic: "Epic [Epic-Jira-Key] ([Epic Title]) has been planned. Would you like to create a dedicated Git branch named 'epic/[Epic-Jira-Key]' from '[activeProjectContext.gitlab_default_branch]' for this Epic? Feature branches for its tasks can then be created from this epic branch."
+    *   If you agree, I will propose the `git checkout -b epic/[Epic-Jira-Key] [activeProjectContext.gitlab_default_branch]` command for you to approve.
+
+---
+
+## 📊 OVERALL WORKFLOW (Mermaid Diagram)
+
+This diagram shows the high-level flow within PLAN mode, emphasizing context selection and AI-driven planning with Jira integration.
+
+```mermaid
+graph TD
+    Start["PLAN Mode Start"] --> ReadConfig["1. Read integration_config.md"]
+    ReadConfig --> SelectContext["2. Select ActiveProjectContext"]
+    SelectContext --> SyncAndCheckCurrent["3. Sync tasks.md (for context)<br>4. Check Current In-Progress Tasks (Jira, for context)"]
+    SyncAndCheckCurrent --> UserChoice{"Continue existing or Plan new?"}
+    
+    UserChoice --"Plan New"--> IdentifyTask["5. Identify Task for Planning<br>(Jira ID or Search in context)"]
+    IdentifyTask --> LLMPlan["6. AI Generates Plan & Final SPs<br>(for selected task & context)"]
+    LLMPlan --> ReviewPlan["User Reviews AI Plan & SPs"]
+    ReviewPlan --> JiraCreate["7. AI Proposes Jira Epic/Task Creation<br>(MCP, with SPs in description, for context)"]
+    JiraCreate --> ConfirmJira["User Confirms Jira Actions"]
+    ConfirmJira --> UpdateTasksMD["8. AI Proposes tasks.md Updates<br>(with context, SPs)"]
+    UpdateTasksMD --> ConfirmTasksMD["User Confirms tasks.md Edits"]
+    ConfirmTasksMD --> JiraStatusUpdate["9. AI Proposes Jira Status Update for Main Task<br>(e.g., to 'To Do', for context)"]
+    JiraStatusUpdate --> ConfirmJiraStatus["User Confirms Status Update"]
+    ConfirmJiraStatus --> ProposeEpicBranch["10. AI Proposes Epic Git Branch (Optional)"]
+    ProposeEpicBranch --> PlanEnd["PLAN Mode Complete"]
+    
+    PlanEnd --> NextMode{"Creative Phase Needed?"}
+    NextMode --"Yes"--> ToCreative["→ CREATIVE Mode"]
+    NextMode --"No"--> ToImplement["→ IMPLEMENT Mode"]
+
+    UserChoice --"Continue Existing"--> ExitPlan["Exit PLAN, transition to<br>CREATIVE or IMPLEMENT for existing task"]
+
+    %% Styling
+    style Start fill:#4da6ff,stroke:#0066cc,color:white
+    style LLMPlan fill:#D5E8D4,stroke:#82B366
+    style JiraCreate fill:#DAE8FC,stroke:#6C8EBF
+    style UpdateTasksMD fill:#FFD966,stroke:#B3A240
+    style NextMode fill:#f8d486,stroke:#e8b84d
+    style ProposeEpicBranch fill:#C2DFFF,stroke:#5C85D6
+```
+
+## 🔑 KEY CONCEPTS IN PLAN MODE
+
+*   **`activeProjectContext`**: All Jira operations and `tasks.md` filtering are specific to this selected context.
+*   **AI-Driven SP Estimation**: I will provide the final Story Point estimates for new tasks. These are based on my analysis and the SP formula in `integration_config.md`.
+*   **SPs in Jira Description**: Story Points for tasks and Epics are stored as text (e.g., "Story Points: 5 SP") in their Jira description field.
+*   **Small Epics**: For Epics with a small total SP (e.g., <7), their sub-tasks are listed in the Epic's description in Jira, not as separate Jira issues.
+*   **MCP for Jira**: All changes to Jira (creating issues, updating status) are proposed by me and require your approval through tool calls.
+*   **`tasks.md` as Local Mirror**: This file is updated by me to reflect the tasks planned and created in Jira for the active context.
+*   **Epic Branching (Optional)**: For planned Epics, dedicated Git branches (e.g., `epic/[Epic-Key]`) can be created to serve as a base for feature branches, improving organization.
+
+## VERIFICATION COMMITMENT
+
+```
+┌─────────────────────────────────────────────────────┐
+│ I WILL always ask for the activeProjectContext.     │
+│ I WILL use LLM to generate plans and SP estimates.  │
+│ I WILL propose Jira creations/updates via MCP.      │
+│ I WILL store SPs in Jira descriptions.              │
+│ I WILL propose updates to tasks.md for the context. │
+└─────────────────────────────────────────────────────┘
+```
+
 ## АВТОМАТИЧЕСКАЯ ПРОВЕРКА СТАТУСОВ ЗАВЕРШЕННЫХ ЗАДАЧ
 
 **ДЕЙСТВИЕ СИСТЕМЫ:** Перед началом работы я проверю статусы задач в Jira, чтобы актуализировать `tasks.md`:

@@ -6,7 +6,7 @@ alwaysApply: false
 # PLAN MODE: LLM-Powered Planning Workflow
 
 ## OVERVIEW
-This mode uses the AI's Large Language Model (LLM) capabilities to analyze the project goal and context, then propose a high-level plan structured into Epics, Sprints, and Tasks, including definitive Story Point (SP) estimations. The output is a plan for review, subsequent Jira issue creation based on a user-selected Project Context, and updating the local `tasks.md` file.
+This mode uses the AI's Large Language Model (LLM) capabilities to analyze the project goal and context, then propose a high-level plan structured into Epics, Sprints, and Tasks, including definitive Story Point (SP) estimations. The output is a plan for review, subsequent Jira issue creation based on a user-selected Project Context, updating the local `tasks.md` file, and optionally creating a Git branch for processed Epics.
 
 ## WORKFLOW
 
@@ -20,7 +20,8 @@ graph TD
     GeneratePlanWithSP --> OutputPlan["Step 5: Output Generated Plan with Final SP"]
     OutputPlan --> JiraSync["Step 5.1: Process Epics & Tasks for Jira Creation (using selected context)"]
     JiraSync --> UpdateTasksMD["Step 5.2: Update Local tasks.md File"]
-    UpdateTasksMD --> End["PLAN Mode End"]
+    UpdateTasksMD --> ProposeEpicBranch["Step 5.3: Propose Epic Git Branch Creation (Optional)"]
+    ProposeEpicBranch --> End["PLAN Mode End"]
 ```
 
 ## DETAILED STEPS
@@ -109,5 +110,18 @@ graph TD
             *   Propose `edit_file` to append this line to `tasks.md` (indented under the Epic, if possible, or as a flat list).
 *   **Report**: "`tasks.md` has been updated/proposed with new tasks for project context '[selectedContextName]'."
 
+### Step 5.3: Propose Epic Git Branch Creation (Optional)
+*   **Action**: For each Epic entry in `createdOrUpdatedJiraIssues` (where `is_epic_only` is false, meaning it's a larger epic with sub-tasks, or even for `is_epic_only` if desired):
+    *   Let `epicKey = epic.jira_id`.
+    *   Let `defaultBranch = activeProjectContext.gitlab_default_branch` (e.g., 'main' or 'develop').
+    *   Propose a branch name, e.g., `epicBranchName = "epic/[epicKey]"`.
+    *   **Action**: Ask user: "An Epic [epicKey] ([epic.title]) has been planned. Would you like to create a dedicated Git branch named '[epicBranchName]' from '[defaultBranch]' for this Epic? Feature branches for its tasks can then be created from this epic branch."
+    *   **Condition**: If user agrees:
+        *   **Action**: Propose `run_terminal_cmd` with `git checkout -b [epicBranchName] [defaultBranch]`.
+        *   **Action**: Wait for approval.
+        *   **Report**: "Git branch '[epicBranchName]' for Epic [epicKey] has been proposed/created from '[defaultBranch]'."
+    *   **Condition**: If user declines:
+        *   **Report**: "OK, a dedicated branch for Epic [epicKey] will not be created at this time. Feature branches will be based off '[defaultBranch]'."
+
 ### Step 6: PLAN Mode End
-*   The mode concludes. User can review Jira and `tasks.md`.
+*   The mode concludes. User can review Jira, `tasks.md`, and Git branches.

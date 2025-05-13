@@ -314,11 +314,23 @@ When the build is complete, notify user with:
     *   **Action**: Propose `edit_file` to append this new line to `tasks.md`.
     *   **Report**: "[selectedJiraIssueKey] added to `tasks.md`."
 
-### Step 4: Propose Git Branch Creation (using Jira key)
-*   **Action**: Ask user: "Recommended: create Git branch `feature/[selectedJiraIssueKey]`. Suggest command?"
+### Step 4: Propose Git Branch Creation (considering Epic branch, using Jira key)
+*   **Action**: Fetch parent Epic key for `selectedJiraIssueKey`. Let this be `parentEpicKey` (can be null).
+*   **Action**: Let `defaultGitBranch = activeProjectContext.gitlab_default_branch`.
+*   **Action**: Initialize `baseBranch = defaultGitBranch`.
+*   **Condition**: If `parentEpicKey` is not null:
+    *   **Action**: Let `epicBranchName = "epic/[parentEpicKey]"`.
+    *   **Action**: Ask user: "Task [selectedJiraIssueKey] may be part of Epic [parentEpicKey]. Does a Git branch '[epicBranchName]' exist for this Epic, and should the new task branch be based on it? If unsure, or if no epic branch exists, we will use '[defaultGitBranch]'."
+    *   **Condition**: If user confirms `epicBranchName` exists and should be used:
+        *   Set `baseBranch = epicBranchName`.
+        *   **Action**: (Optional: Propose `git checkout [epicBranchName]` and `git pull` to ensure it's up-to-date if user isn't already on it).
+*   **Action**: Let `featureBranchName = "feature/[selectedJiraIssueKey]-implementation"` (or `-bugfix/`, `-hotfix/` depending on task type if discernible).
+*   **Action**: Ask user: "It's recommended to work in a dedicated Git branch. Propose creating/switching to branch '[featureBranchName]' from '[baseBranch]'?"
 *   **Condition**: If user agrees:
-    *   **Action**: Propose `run_terminal_cmd` with `git checkout -b feature/[selectedJiraIssueKey]`.
+    *   **Action**: Propose `run_terminal_cmd` with `git checkout -b [featureBranchName] [baseBranch]`.
+    *   **(Error Handling Note for AI)**: If `baseBranch` (especially an epic branch) doesn't exist locally, `git checkout -b` will fail if `baseBranch` is not `defaultGitBranch`. The AI should handle this by falling back to `defaultGitBranch` and informing the user, or asking the user to create/pull the epic branch first.
     *   **Action**: Wait for approval.
+*   **Report**: "Git branch '[featureBranchName]' proposed/created from '[baseBranch]'."
 
 ### Step 5: Execute Implementation Steps
 *   **Action**: Read relevant planning/creative documents if they exist (e.g., `plan-[selectedJiraIssueKey].md`, `creative-[selectedJiraIssueKey].md`).
@@ -333,24 +345,25 @@ When the build is complete, notify user with:
 *   **Action**: Ask user: "Implementation for [selectedJiraIssueKey] complete? Suggest Git commands?"
 *   **Condition**: If user agrees:
     *   Propose `git add .`, `git commit -m "feat([selectedJiraIssueKey]): Description of changes"` (get description from user), `git push origin feature/[selectedJiraIssueKey]`.
-    *   Propose `git checkout [selectedGitLabDefaultBranch]`, `git pull origin [selectedGitLabDefaultBranch]`, `git merge --no-ff feature/[selectedJiraIssueKey]`, `git push origin [selectedGitLabDefaultBranch]`.
+    *   Propose `git checkout [activeProjectContext.gitlab_default_branch]`, `git pull origin [activeProjectContext.gitlab_default_branch]`, `git merge --no-ff feature/[selectedJiraIssueKey]`, `git push origin [activeProjectContext.gitlab_default_branch]`.
     *   Remind about merge conflicts, PR alternative.
 *   **Action**: Wait for approval for each command.
 *   **GitLab Pipeline Check**:
-    *   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/gitlab/gitlab_tools.py check-pipeline [selectedGitLabDefaultBranch] --repo_url [activeProjectContext.gitlab_repo_url]`.
+    *   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_project_id]` (Assuming gitlab_project_id can be a repo URL or an ID the script handles).
     *   **Action**: Wait for approval and check output.
 *   **Vercel Deployment Check (Conditional & Optional)**:
-    *   **Condition**: If GitLab pipeline successful AND `activeProjectContext.vercel_project_id` is defined.
-    *   **Action**: Ask user: "Project '[activeProjectContext.context_name]' uses Vercel. Check Vercel production deployment status?"
+    *   **Condition**: If GitLab pipeline successful AND `activeProjectContext.vercel_project_id` is defined AND `activeProjectContext.vercel_project_id` is not null or empty.
+    *   **Action**: Ask user: "Project '[activeProjectContext.context_name]' is configured for Vercel (ID: [activeProjectContext.vercel_project_id]). Would you like to check its production deployment status?"
     *   **Condition**: If user agrees:
-        *   **Action**: Propose `run_terminal_cmd`: `python devops-tools/vercel/vercel_tools.py status --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]`.
-        *   **Action**: (Optional) Ask if want to trigger new Vercel deploy: `python devops-tools/vercel/vercel_tools.py deploy --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]`.
+        *   **Action**: Propose `run_terminal_cmd`: `python devops-tools/vercel/vercel_tools.py status --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]` (if team_id is configured).
+        *   **Action**: (Optional) Ask user: "Would you like to trigger a new Vercel production deployment for '[activeProjectContext.context_name]'?"
+        *   **Condition**: If user agrees:
+            *   **Action**: Propose `run_terminal_cmd`: `python devops-tools/vercel/vercel_tools.py deploy --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]` (if team_id is configured).
 
-### Step 6.1: Mark Task as Implementation Complete in `tasks.md`
+### Step 6.1: Update `tasks.md` to Reflect Implementation Stage Completion
 *   **Action**: After Git & DevOps checks are done (or skipped by user):
-    *   Propose `edit_file` for `tasks.md` to update the status of `selectedTaskLine` (e.g., if it was `[ ]`, it might not change yet, but confirm it's still accurate before REFLECT). Or, if a specific local status like "Implemented-Pending-Reflect" is used, update to that.
-    *   *Alternatively, this step focuses on ensuring the task in `tasks.md` is accurately reflecting a state ready for REFLECT/QA, even if the checkbox isn't `[x]` yet.* 
-*   **Report**: "`tasks.md` status for [selectedJiraIssueKey] noted as ready for next phase."
+    *   **Action**: Propose `edit_file` for `tasks.md` to update `selectedTaskLine` by appending a note like "- Implementation phase complete, pending QA/Reflection." to its description. The checkbox `[ ]` should remain unchanged at this stage.
+*   **Report**: "`tasks.md` status for [selectedJiraIssueKey] noted as 'Implementation phase complete, pending QA/Reflection'."
 
 ### Step 7: Suggest Next Mode (QA/REFLECT)
 *   **Reminder**: "If implementation for [selectedJiraIssueKey] affected architecture, update `/docs/architecture.md` (for context '[activeProjectContext.context_name]')."

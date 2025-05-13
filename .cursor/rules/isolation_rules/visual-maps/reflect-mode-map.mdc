@@ -234,20 +234,29 @@ graph TD
 *   Document findings in a file like `reflection-docs/reflection-[selectedJiraIssueKey].md`.
 
 ### Step (Update Jira Status)
-*   **Action**: Let `reflectCompleteStatus = selectedJiraStatusMapping.REFLECT`.
-*   **Action**: Ask user: "Reflection for [selectedJiraIssueKey] documented. Update Jira status to '[reflectCompleteStatus]'?"
-*   **Condition**: If user agrees:
-    *   **Action**: Call `mcp_mcp-atlassian_jira_transition_issue` (or `update_issue`) for `selectedJiraIssueKey` in `selectedJiraProjectKey` to `reflectCompleteStatus`.
-    *   **Report**: "Jira Task [selectedJiraIssueKey] status updated to '[reflectCompleteStatus]'."
-    *   Set `jiraStatusUpdatedInReflect = true`.
+*   **Action**: Let `reflectStatusKey = "REFLECT_COMPLETE"` (This key should be defined in `integration_config.md` under `jira_status_mapping` for each context, e.g., `REFLECT_COMPLETE: "Ready for Archive"`).
+*   **Action**: Let `reflectCompleteStatus = activeProjectContext.jira_status_mapping[reflectStatusKey]`.
+*   **Condition**: If `reflectCompleteStatus` is not defined or empty:
+    *   **Report**: "Warning: Jira status for reflection completion (key '[reflectStatusKey]') is not defined in the `jira_status_mapping` for context '[activeProjectContext.context_name]'. Jira status will not be updated."
+    *   **Action**: Set `jiraStatusUpdatedInReflect = false`. Proceed to next step.
+*   **Condition**: Else (status is defined):
+    *   **Action**: Ask user: "Reflection for [selectedJiraIssueKey] documented. Update Jira status to '[reflectCompleteStatus]' for project '[selectedJiraProjectKey]'?"
+    *   **Condition**: If user agrees:
+        *   **Action**: Call `mcp_mcp-atlassian_jira_transition_issue` (or `update_issue`) for `selectedJiraIssueKey` in `selectedJiraProjectKey` to `reflectCompleteStatus`.
+        *   **Report**: "Jira Task [selectedJiraIssueKey] status updated to '[reflectCompleteStatus]'."
+        *   Set `jiraStatusUpdatedInReflect = true`.
+    *   **Condition**: Else (user disagrees):
+        *   **Report**: "Jira status not updated for [selectedJiraIssueKey] as per user request."
+        *   Set `jiraStatusUpdatedInReflect = false`.
 
 ### Step (Update `tasks.md` with Reflection Completion)
 *   **Condition**: If `jiraStatusUpdatedInReflect` is true AND `selectedTaskLine` is not null:
-    *   **Action**: Formulate updated task line for `tasks.md`. The status checkbox `[ ]` might remain if ARCHIVE is the final step, or change to `[x]` if REFLECT is considered locally final for this file. Add a note like "- Reflection Complete" or update description if appropriate.
-    *   **Action**: Propose `edit_file` for `tasks.md` to replace `selectedTaskLine` with the updated line.
-    *   **Report**: "`tasks.md` updated for [selectedJiraIssueKey] to reflect completion of reflection."
-*   **Condition**: If `selectedTaskLine` was null and Jira status updated (task was handled only via Jira ID):
-    *   **Action**: Consider if a new line for `tasks.md` should be proposed here if it wasn't added during IMPLEMENT mode.
+    *   **Action**: Propose `edit_file` for `tasks.md` to update `selectedTaskLine` by appending a note like "- Reflection Complete." to its description. The checkbox `[ ]` should remain unchanged at this stage.
+    *   **Report**: "`tasks.md` updated for [selectedJiraIssueKey] (Context: [activeProjectContext.context_name]) to reflect completion of reflection phase."
+*   **Condition**: If `selectedTaskLine` was null and `jiraStatusUpdatedInReflect` is true (task was handled only via Jira ID):
+    *   **Action**: Formulate new task line for `tasks.md` including `selectedJiraIssueKey`, `taskTitle`, `selectedJiraProjectKey`, `activeProjectContext.context_name`, SP (if known or default to 0), and the note "- Reflection Complete.".
+    *   **Action**: Propose `edit_file` to append this new line to `tasks.md`.
+    *   **Report**: "New entry for [selectedJiraIssueKey] (Context: [activeProjectContext.context_name]) with reflection completion noted added to `tasks.md`."
 
 ### Step (Transition to ARCHIVE)
 *   **Report**: "Reflection for [selectedJiraIssueKey] complete. Recommended next: ARCHIVE Mode."
