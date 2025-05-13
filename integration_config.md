@@ -79,9 +79,9 @@ These settings apply across all project contexts unless overridden within a spec
 *   **Purpose**: `tasks.md` is the primary local file for tracking tasks across different project contexts. It is intended to be managed by the AI system.
 *   **AI Role**: The AI is responsible for creating this file if it doesn't exist (based on a defined template), reading it, parsing its content, updating it with new tasks from Jira (for the active context), reflecting status changes from Jira, and proposing edits to the user for confirmation.
 *   **Format**: Each task entry in `tasks.md` **MUST** follow this format:
-    `- [ ] **[JIRA_PROJECT_KEY:JIRA_ISSUE_ID]** Task Title - *Brief description* - **SP: X** (Context: Context Name)`
+    `- [ ] **[JIRA_PROJECT_KEY:JIRA_ISSUE_ID]** Task Title - *Brief description* - SP_VALUE=[X] (Context: Context Name)`
     *   `JIRA_PROJECT_KEY:JIRA_ISSUE_ID`: e.g., `ALPHA:ALPHA-123`
-    *   `SP: X`: Story Points for the task.
+    *   `SP_VALUE=[X]`: Story Points for the task, where X is an integer or a float (e.g., 0.5, 1, 2.5). Example: `SP_VALUE=3`, `SP_VALUE=0.5`.
     *   `Context: Context Name`: The `context_name` from the "Project Contexts" section this task belongs to.
 *   **Synchronization**: The AI should strive to keep `tasks.md` synchronized with Jira for the tasks relevant to the active contexts.
 
@@ -102,8 +102,11 @@ You can list default team members here if tasks are often assigned to the same g
 ### Task Estimation (Story Points)
 *   **Formula Guideline**: `1 SP (Story Point) = approximately 8 developer hours = approximately 10 AI minutes` (This is a loose guideline for the AI's internal understanding and relative estimation, not a strict conversion for human team members).
 *   **AI-Driven Estimation**: The AI is responsible for providing the **final SP estimate** for tasks during the `PLAN` mode. This estimate is based on its analysis and is not typically subject to user review for adjustment, though the user can override if necessary.
-*   **Storage in Jira**: Story Points are to be stored as plain text within the **description field** of the Jira issue (Epic or Story/Task). For example: `Story Points: 5 SP`. Do not use custom Jira fields for SP unless explicitly told otherwise for a specific context.
-*   **Small Epics**: For Epics estimated by the AI to be "small" (e.g., total SP of sub-tasks < 7 SP), individual sub-tasks should NOT be created as separate Jira issues. Instead, the list of sub-tasks and their individual SPs should be documented within the description of the parent Epic Jira issue. The Epic itself will carry the total SP.
+*   **Storage in Jira**: Story Points **MUST** be stored as plain text within the **description field** of the Jira issue (Epic or Story/Task) using the exact format: `SP_VALUE=[X]`.
+    *   `SP_VALUE=`: This is the key prefix. It must be uppercase S, P, _, V, A, L, U, E, followed by an equals sign. No spaces before or after the equals sign are preferred.
+    *   `[X]`: This is the actual Story Points value. It can be an integer (e.g., 1, 2, 3, 5, 8, 13) or a float using a period as a decimal separator (e.g., 0.5, 1.5, 2.5).
+    *   Examples: `SP_VALUE=3`, `SP_VALUE=0.5`, `SP_VALUE=8`.
+*   **Small Epics**: For Epics estimated by the AI to be "small" (e.g., total SP of sub-tasks < 7 SP), individual sub-tasks should NOT be created as separate Jira issues. Instead, the list of sub-tasks and their individual SPs (each formatted as `SP_VALUE=X`) should be documented within the description of the parent Epic Jira issue. The Epic itself will also have its total SP recorded in its description using the `SP_VALUE=X` format.
 
 ## Setup Instructions
 
@@ -116,11 +119,11 @@ You can list default team members here if tasks are often assigned to the same g
 2.  **Review Global Settings**:
     *   Modify the `Project Team` list if needed.
     *   Understand the `Task Assignment Rules`.
-    *   Understand the `Task Estimation (Story Points)` guidelines, especially how SPs are estimated by the AI and stored in Jira task descriptions.
+    *   Understand the `Task Estimation (Story Points)` guidelines, especially how SPs are estimated by the AI and stored in Jira task descriptions using the `SP_VALUE=[X]` format.
 
 3.  **`tasks.md` Management**:
     *   The AI will manage the `tasks.md` file. If it's missing, the AI should create it based on a standard template (see "Local Task Management" section).
-    *   Ensure the AI understands to parse and update `tasks.md` according to the specified format, especially the `(Context: Context Name)` part for multi-context support.
+    *   Ensure the AI understands to parse and update `tasks.md` according to the specified format, especially the `SP_VALUE=[X]` and `(Context: Context Name)` parts.
 
 4.  **Inform the AI**:
     *   Once configured, ensure the AI is aware of this `integration_config.md` file and is instructed to use it as the primary source for all integration parameters and global settings.

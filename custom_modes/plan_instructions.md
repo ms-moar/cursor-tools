@@ -32,16 +32,16 @@ If you choose to plan a new task:
 2.  **LLM-Powered Plan & SP Estimation (AI Action)**:
     *   I will use my LLM capabilities to analyze `selectedTaskTitle` and its description (fetched from Jira for `selectedJiraIssueKey`).
     *   I will generate a detailed plan, including potential Epics, Sprints (if applicable for complexity), and a breakdown of specific, actionable sub-tasks. 
-    *   **Crucially, I will provide a FINAL Story Point (SP) estimation for each new task/sub-task generated.** This estimation is based on complexity, using the formula in `integration_config.md` as a guideline (e.g., `1 SP = 8 dev hours = 10 AI minutes`).
-    *   I will present this plan to you for review (Epics -> Sprints -> Tasks with Name, Description, SP).
+    *   **Crucially, I will provide a FINAL Story Point (SP) estimation for each new task/sub-task generated.** This estimation is based on complexity, using the formula in `integration_config.md` as a guideline (e.g., `1 SP = 8 dev hours = 10 AI minutes`). The SPs will be presented in the format `SP_VALUE=[X]` (e.g., `SP_VALUE=3`, `SP_VALUE=0.5`).
+    *   I will present this plan to you for review (Epics -> Sprints -> Tasks with Name, Description, SP in `SP_VALUE=[X]` format).
 3.  **Jira Issue Creation/Update (Semi-Automated)**:
     *   Based on the AI-generated plan and SPs, I will propose to:
-        *   Create a new Epic in Jira (for `activeProjectContext.jira_project_key`) if the plan involves a new Epic. The Epic's description will include its total SP and a list of its tasks if it's a "small epic" (e.g., <7 SP total, tasks not created individually in Jira). The context name will also be noted in the description.
-        *   Create new individual tasks (Stories, Tasks, etc., based on `activeProjectContext.jira_default_issue_type`) in Jira under the relevant Epic (if any). The description of each Jira task **MUST include its SP value** (e.g., "Story Points: X SP") and the `activeProjectContext.context_name`.
+        *   Create a new Epic in Jira (for `activeProjectContext.jira_project_key`) if the plan involves a new Epic. The Epic's description will include its total SP (formatted as `SP_VALUE=[TotalSP]`) and a list of its tasks if it's a "small epic" (e.g., <7 SP total, tasks not created individually in Jira, with each task SP also as `SP_VALUE=X`). The context name will also be noted in the description.
+        *   Create new individual tasks (Stories, Tasks, etc., based on `activeProjectContext.jira_default_issue_type`) in Jira under the relevant Epic (if any). The description of each Jira task **MUST include its SP value** formatted as `SP_VALUE=[X]` and the `activeProjectContext.context_name`.
     *   You will need to **approve** these creation steps via MCP tool calls.
 4.  **Update Local `tasks.md`**: 
-    *   After successful Jira issue creation(s), I will propose edits to `tasks.md` to add these new tasks. Each line will follow the format: `- [ ] **[[activeProjectContext.jira_project_key]:JIRA_ID]** Title - **SP: X** (Context: [activeProjectContext.context_name])`.
-    *   I will also check if the main `selectedJiraIssueKey` (if it was an existing one being planned out) needs its description or SP updated in `tasks.md`.
+    *   After successful Jira issue creation(s), I will propose edits to `tasks.md` to add these new tasks. Each line will follow the format: `- [ ] **[[activeProjectContext.jira_project_key]:JIRA_ID]** Title - SP_VALUE=[X] (Context: [activeProjectContext.context_name])`.
+    *   I will also check if the main `selectedJiraIssueKey` (if it was an existing one being planned out) needs its description or SP (in `SP_VALUE=[X]` format) updated in `tasks.md`.
 5.  **Link to Epic & Sprint (Optional, Semi-Automated)**:
     *   If a new Epic was created, I will ensure sub-tasks are linked to it in Jira.
     *   I can check for an active Sprint for `activeProjectContext.jira_project_key` and propose linking the planned tasks to it, if you wish.
@@ -97,10 +97,10 @@ graph TD
 
 *   **`activeProjectContext`**: All Jira operations and `tasks.md` filtering are specific to this selected context.
 *   **AI-Driven SP Estimation**: I will provide the final Story Point estimates for new tasks. These are based on my analysis and the SP formula in `integration_config.md`.
-*   **SPs in Jira Description**: Story Points for tasks and Epics are stored as text (e.g., "Story Points: 5 SP") in their Jira description field.
-*   **Small Epics**: For Epics with a small total SP (e.g., <7), their sub-tasks are listed in the Epic's description in Jira, not as separate Jira issues.
+*   **SPs in Jira Description and `tasks.md`**: Story Points for tasks and Epics are stored as plain text using the format `SP_VALUE=[X]` (e.g., `SP_VALUE=3`, `SP_VALUE=0.5`) in their Jira description field and in `tasks.md`.
+*   **Small Epics**: For Epics with a small total SP (e.g., <7), their sub-tasks are listed in the Epic's description in Jira (with SPs as `SP_VALUE=X`), not as separate Jira issues. The Epic itself also uses `SP_VALUE=[TotalSP]`.
 *   **MCP for Jira**: All changes to Jira (creating issues, updating status) are proposed by me and require your approval through tool calls.
-*   **`tasks.md` as Local Mirror**: This file is updated by me to reflect the tasks planned and created in Jira for the active context.
+*   **`tasks.md` as Local Mirror**: This file is updated by me to reflect the tasks planned and created in Jira for the active context, using the `SP_VALUE=[X]` format.
 *   **Epic Branching (Optional)**: For planned Epics, dedicated Git branches (e.g., `epic/[Epic-Key]`) can be created to serve as a base for feature branches, improving organization.
 
 ## VERIFICATION COMMITMENT
