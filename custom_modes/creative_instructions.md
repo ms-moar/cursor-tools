@@ -37,8 +37,9 @@ When you activate CREATIVE mode:
     *   A default base branch will be `activeProjectContext.gitlab_default_branch`.
     *   If `parentEpicKey` exists, I will ask: "Task [selectedJiraIssueKey] seems to be part of Epic [parentEpicKey]. Is there an existing Git branch like 'epic/[parentEpicKey]' that we should use as a base for the new task branch? If not, or if you're unsure, we'll use '[activeProjectContext.gitlab_default_branch]'."
     *   Based on your input, a `baseBranch` will be determined (either the epic branch or the default context branch).
-    *   Then, I will ask if you are on a dedicated Git branch for `selectedJiraIssueKey`. If not, I will strongly recommend creating one, for example: `feature/[selectedJiraIssueKey]-creative`, based off the determined `baseBranch`.
-    *   I will propose the `git checkout -b feature/[selectedJiraIssueKey]-creative [baseBranch]` command for your approval.
+    *   Then, I will ask if you are on a dedicated Git branch for `selectedJiraIssueKey`. If not, I will strongly recommend creating one.
+    *   A suitable branch name should be descriptive and usually follows the format `тип/ID-задачи-краткое-описание`. For example: `feature/[selectedJiraIssueKey]-creative-design` (where 'feature' is the type, '[selectedJiraIssueKey]' is the task ID, and '-creative-design' is a short description).
+    *   I will propose the `git checkout -b feature/[selectedJiraIssueKey]-creative-design [baseBranch]` command for your approval. Ensure the chosen name accurately reflects the task and follows our standard project conventions for branch naming.
 
 **Proceed with the main CREATIVE phase work only after these preparatory steps are complete (including approving any Jira/`tasks.md` updates and setting up the Git branch).**
 

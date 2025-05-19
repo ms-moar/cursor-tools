@@ -39,7 +39,8 @@ When you activate IMPLEMENT mode:
     *   If `parentEpicKey` exists, I will ask: "Task [selectedJiraIssueKey] seems to be part of Epic [parentEpicKey]. Is there an existing Git branch like 'epic/[parentEpicKey]' that we should use as a base for the new task branch? If not, or if you're unsure, we'll use '[activeProjectContext.gitlab_default_branch]'."
     *   Based on your input, a `baseBranch` will be determined (either the epic branch or the default context branch).
     *   For isolating changes, I will **strongly recommend creating a new Git branch** for `selectedJiraIssueKey`.
-    *   I will propose the command: `git checkout -b feature/[selectedJiraIssueKey]-implementation [baseBranch]` (or similar, based on task type, e.g., `bugfix/`, `hotfix/`).
+    *   I will propose a branch name like `feature/[selectedJiraIssueKey]-implementation` or `bugfix/[selectedJiraIssueKey]-fix-details`, following the typical project format `тип/ID-задачи-краткое-описание`. For example, for a feature:
+    *   I will propose the command: `git checkout -b feature/[selectedJiraIssueKey]-implementation [baseBranch]`. Ensure the chosen name accurately reflects the task and adheres to our project's branch naming standards.
 
 **Proceed with actual coding only after these preparatory steps are complete and your Git branch is ready.**
 
@@ -61,9 +62,10 @@ When you activate IMPLEMENT mode:
 Once you believe the implementation for `selectedJiraIssueKey` is complete:
 
 1.  **Final Code Review & Local Tests**: Ensure all code is clean, commented where necessary, and local unit/integration tests pass.
-2.  **Git Commit & Push**: 
-    *   I will propose `git add .` and `git commit -m "feat([selectedJiraIssueKey]): Your detailed commit message"`.
-    *   Then, `git push origin feature/[selectedJiraIssueKey]-implementation` (or your branch name).
+2.  **Git Commit & Push**:
+    *   I will propose `git add .`.
+    *   Then, for the commit message, we should use the standard project format: `[ID-задачи] тип: Краткое описание изменений` (or `тип: Описание` if no ID). I can help you craft this message. For example: `git commit -m "feat([selectedJiraIssueKey]): Implement user login functionality"`. I can assist in generating a compliant commit message.
+    *   I will then propose: `git push origin feature/[selectedJiraIssueKey]-implementation` (or your actual branch name).
 3.  **Merge to Default Branch**: 
     *   I will propose switching to `activeProjectContext.gitlab_default_branch` (e.g., `main` or `develop`), pulling latest changes, and merging your feature branch (e.g., `git merge --no-ff feature/[selectedJiraIssueKey]-implementation`).
     *   I will remind you about resolving potential merge conflicts.
@@ -125,7 +127,7 @@ graph TD
 
 *   **`activeProjectContext`**: All Jira, Git default branch, and DevOps operations are specific to this context.
 *   **MCP for Jira**: Status changes and assignments in Jira are proposed by me and require your approval.
-*   **Git Workflow**: Emphasis on feature branches, commits linked to Jira keys, and merging back to the context's default branch (or PRs).
+*   **Git Workflow**: Emphasis on feature branches, commits linked to Jira keys (and formatted according to project standards), and merging back to the context's default branch (or PRs).
 *   **DevOps Integration**: CI/CD checks are performed using tools and configurations relevant to the `activeProjectContext`.
 *   **Iterative Updates**: `tasks.md` can be updated to reflect granular progress during implementation.
 

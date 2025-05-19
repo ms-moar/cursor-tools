@@ -34,23 +34,29 @@ If you choose to plan a new task:
     *   I will generate a detailed plan, including potential Epics, Sprints (if applicable for complexity), and a breakdown of specific, actionable sub-tasks. 
     *   **Crucially, I will provide a FINAL Story Point (SP) estimation for each new task/sub-task generated.** This estimation is based on complexity, using the formula in `integration_config.md` as a guideline (e.g., `1 SP = 8 dev hours = 10 AI minutes`). The SPs will be presented in the format `SP_VALUE=[X]` (e.g., `SP_VALUE=3`, `SP_VALUE=0.5`).
     *   I will present this plan to you for review (Epics -> Sprints -> Tasks with Name, Description, SP in `SP_VALUE=[X]` format).
-3.  **Jira Issue Creation/Update (Semi-Automated)**:
-    *   Based on the AI-generated plan and SPs, I will propose to:
+3.  **Check for Duplicate Tasks in Jira (AI Action)**:
+    *   **Before proposing to create any new tasks in Jira**, for each task (and sub-task) from the AI-generated plan, I will first search Jira (within `activeProjectContext.jira_project_key`) for existing tasks with a similar title/summary.
+    *   If potential duplicates are found, I will list them for you (e.g., "[JIRA_KEY] Task Title - Status") and ask if any of these existing tasks correspond to the planned item, or if I should proceed with creating a new one.
+    *   If you identify an existing task: We will use that existing Jira task. I will then propose to update its description with the planned SP (e.g., `SP_VALUE=[X]`) and link it to an Epic if necessary, instead of creating a new task.
+    *   If no duplicates are found, or if you confirm that a new task is needed: I will proceed to the next step to propose its creation.
+4.  **Jira Issue Creation/Update (Semi-Automated)**:
+    *   Based on the AI-generated plan, SPs, and the results of the duplicate check, I will propose to:
         *   Create a new Epic in Jira (for `activeProjectContext.jira_project_key`) if the plan involves a new Epic. The Epic's description will include its total SP (formatted as `SP_VALUE=[TotalSP]`) and a list of its tasks if it's a "small epic" (e.g., <7 SP total, tasks not created individually in Jira, with each task SP also as `SP_VALUE=X`). The context name will also be noted in the description.
         *   Create new individual tasks (Stories, Tasks, etc., based on `activeProjectContext.jira_default_issue_type`) in Jira under the relevant Epic (if any). The description of each Jira task **MUST include its SP value** formatted as `SP_VALUE=[X]` and the `activeProjectContext.context_name`.
     *   You will need to **approve** these creation steps via MCP tool calls.
-4.  **Update Local `tasks.md`**: 
+5.  **Update Local `tasks.md`**: 
     *   After successful Jira issue creation(s), I will propose edits to `tasks.md` to add these new tasks. Each line will follow the format: `- [ ] **[[activeProjectContext.jira_project_key]:JIRA_ID]** Title - SP_VALUE=[X] (Context: [activeProjectContext.context_name])`.
     *   I will also check if the main `selectedJiraIssueKey` (if it was an existing one being planned out) needs its description or SP (in `SP_VALUE=[X]` format) updated in `tasks.md`.
-5.  **Link to Epic & Sprint (Optional, Semi-Automated)**:
+6.  **Link to Epic & Sprint (Optional, Semi-Automated)**:
     *   If a new Epic was created, I will ensure sub-tasks are linked to it in Jira.
     *   I can check for an active Sprint for `activeProjectContext.jira_project_key` and propose linking the planned tasks to it, if you wish.
-6.  **Update Jira Task Status (for `selectedJiraIssueKey`)**: 
+7.  **Update Jira Task Status (for `selectedJiraIssueKey`)**: 
     *   Once planning is complete, I will propose updating the status of `selectedJiraIssueKey` in Jira to a status indicating planning is done (e.g., `activeProjectContext.jira_status_mapping.PLAN` which might map to 'To Do' or 'Ready for Development').
     *   This requires your approval via MCP.
     *   I will then propose an edit to `tasks.md` to reflect this status change locally.
-7.  **Propose Epic/Phase Git Branch (Optional)**:
+8.  **Propose Epic/Phase Git Branch (Optional)**:
     *   If one or more Epics were processed (created or planned under) during this session, I will ask you for each Epic: "Epic [Epic-Jira-Key] ([Epic Title]) has been planned. Would you like to create a dedicated Git branch named 'epic/[Epic-Jira-Key]' from '[activeProjectContext.gitlab_default_branch]' for this Epic? Feature branches for its tasks can then be created from this epic branch."
+    *   This naming convention ('epic/[Epic-Jira-Key]') is a project-specific standard. For other types of branches, use a descriptive name, typically in the format `тип/ID-задачи-краткое-описание` (e.g., `feature/TASK-123-new-login-flow`).
     *   If you agree, I will propose the `git checkout -b epic/[Epic-Jira-Key] [activeProjectContext.gitlab_default_branch]` command for you to approve.
 
 ---
@@ -69,13 +75,14 @@ graph TD
     UserChoice --"Plan New"--> IdentifyTask["5. Identify Task for Planning<br>(Jira ID or Search in context)"]
     IdentifyTask --> LLMPlan["6. AI Generates Plan & Final SPs<br>(for selected task & context)"]
     LLMPlan --> ReviewPlan["User Reviews AI Plan & SPs"]
-    ReviewPlan --> JiraCreate["7. AI Proposes Jira Epic/Task Creation<br>(MCP, with SPs in description, for context)"]
+    ReviewPlan --> CheckDuplicateJira["7. AI Checks for Duplicate Tasks in Jira<br>(Search by title, for context)"]
+    CheckDuplicateJira --> JiraCreate["8. AI Proposes Jira Epic/Task Creation/Update<br>(MCP, with SPs in description, for context)"]
     JiraCreate --> ConfirmJira["User Confirms Jira Actions"]
-    ConfirmJira --> UpdateTasksMD["8. AI Proposes tasks.md Updates<br>(with context, SPs)"]
+    ConfirmJira --> UpdateTasksMD["9. AI Proposes tasks.md Updates<br>(with context, SPs)"]
     UpdateTasksMD --> ConfirmTasksMD["User Confirms tasks.md Edits"]
-    ConfirmTasksMD --> JiraStatusUpdate["9. AI Proposes Jira Status Update for Main Task<br>(e.g., to 'To Do', for context)"]
+    ConfirmTasksMD --> JiraStatusUpdate["10. AI Proposes Jira Status Update for Main Task<br>(e.g., to 'To Do', for context)"]
     JiraStatusUpdate --> ConfirmJiraStatus["User Confirms Status Update"]
-    ConfirmJiraStatus --> ProposeEpicBranch["10. AI Proposes Epic Git Branch (Optional)"]
+    ConfirmJiraStatus --> ProposeEpicBranch["11. AI Proposes Epic Git Branch (Optional)"]
     ProposeEpicBranch --> PlanEnd["PLAN Mode Complete"]
     
     PlanEnd --> NextMode{"Creative Phase Needed?"}
@@ -101,7 +108,7 @@ graph TD
 *   **Small Epics**: For Epics with a small total SP (e.g., <7), their sub-tasks are listed in the Epic's description in Jira (with SPs as `SP_VALUE=X`), not as separate Jira issues. The Epic itself also uses `SP_VALUE=[TotalSP]`.
 *   **MCP for Jira**: All changes to Jira (creating issues, updating status) are proposed by me and require your approval through tool calls.
 *   **`tasks.md` as Local Mirror**: This file is updated by me to reflect the tasks planned and created in Jira for the active context, using the `SP_VALUE=[X]` format.
-*   **Epic Branching (Optional)**: For planned Epics, dedicated Git branches (e.g., `epic/[Epic-Key]`) can be created to serve as a base for feature branches, improving organization.
+*   **Epic Branching (Optional)**: For planned Epics, dedicated Git branches (e.g., `epic/[Epic-Key]`) can be created to serve as a base for feature branches, improving organization. Ensure branch names follow the project's standard formats (e.g., `тип/ID-задачи-краткое-описание` or `epic/[Epic-Key]` for epics).
 
 ## VERIFICATION COMMITMENT
 
