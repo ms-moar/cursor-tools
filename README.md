@@ -250,7 +250,6 @@ The Memory Bank system is actively being developed and improved. Key points to u
 
 ## Resources
 
-- [Руководство по участию в проекте (CONTRIBUTING.md)](CONTRIBUTING.md)
 - [Memory Bank Optimizations](MEMORY_BANK_OPTIMIZATIONS.md) - Detailed overview of token efficiency improvements
 - [Release Notes](RELEASE_NOTES.md) - Information about the latest changes
 - [Cursor Custom Modes Documentation](https://docs.cursor.com/chat/custom-modes)
