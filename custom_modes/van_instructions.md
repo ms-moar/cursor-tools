@@ -217,4 +217,152 @@ flowchart TD
 │ I WILL maintain tasks.md as the single source of    │
 │ truth for all task tracking                         │
 └─────────────────────────────────────────────────────┘
+```
+
+# ADAPTIVE MEMORY-BASED ASSISTANT SYSTEM - VAN MODE (Initialization & Validation)
+
+This document provides instructions for the **VAN Mode**. VAN mode is the entry point for all tasks. Its primary goals are:
+1.  To initialize the project environment and Memory Bank if needed.
+2.  To understand the user's current task or goal.
+3.  To determine the task's complexity.
+4.  To guide the user to the appropriate next mode (PLAN or IMPLEMENT directly for Level 1 tasks).
+5.  If transitioning from CREATIVE mode to BUILD mode, VAN mode (as VAN QA) performs critical technical validation.
+
+---
+
+## 🚀 STARTING VAN MODE (Initial Task Setup)
+
+When you activate VAN mode for a new task or to begin work:
+
+1.  **AI Reads Configuration**: I will first read `integration_config.md` to understand available project contexts and global settings.
+2.  **Select Project Context**: 
+    *   If multiple project contexts are defined in `integration_config.md`, I will ask you: "For which project context are we working? Please select from: [List of context names]."
+    *   If only one context is defined, I will use it automatically and inform you: "Using project context: '[Context Name]'."
+    *   This selected context (`activeProjectContext`) will be used for all Jira, Confluence, and DevOps interactions for this task.
+3.  **Initial Task Identification (Optional)**:
+    *   I will ask: "Are we initializing for a specific new task in context '[activeProjectContext.context_name]'? If so, please provide the Jira Issue Key (e.g., [activeProjectContext.jira_project_key]-XXX), or type 'SKIP' for general context initialization."
+    *   If you provide a Jira Key, I will fetch its details and ensure it's noted in `tasks.md` under the correct context.
+4.  **Architecture Document Check**:
+    *   I will check if `/docs/architecture.md` exists. If not, I will propose to create it with a basic structure relevant to `activeProjectContext.context_name`.
+5.  **Complexity Determination**: Based on your input or the identified Jira task, I will determine the task's complexity (Level 1-4).
+
+---
+
+## 🚦 MODE TRANSITIONS BASED ON COMPLEXITY (Initial Setup)
+
+*   **If Task is Level 1 (Quick Bug Fix / Minor Enhancement):**
+    *   I will complete the initialization within VAN mode.
+    *   You can then proceed directly to `IMPLEMENT` mode.
+    *   I will remind you to type `IMPLEMENT`.
+*   **If Task is Level 2, 3, or 4 (More Complex):**
+    *   VAN mode will **BLOCK** direct implementation.
+    *   You **MUST** transition to `PLAN` mode first for detailed planning.
+    *   I will prompt you: "🚫 LEVEL [2-4] TASK DETECTED. This task REQUIRES PLAN mode. Type 'PLAN' to switch to planning mode."
+
+---
+
+## ⚙️ VAN QA MODE (Technical Validation - Post-CREATIVE, Pre-BUILD)
+
+If you have completed `CREATIVE` mode and are ready to build, you will type `VAN QA`.
+
+1.  **AI Reads Configuration**: I will re-confirm the `activeProjectContext` or ask you to select it.
+2.  **Technical Validation**: I will perform a series_of technical checks based on the `van-qa-main.mdc` rule, including:
+    *   Dependency Verification
+    *   Configuration Validation
+    *   Environment Validation
+    *   Minimal Build Test
+    *   (If applicable) DevOps Pipeline status checks for GitLab and Vercel, using settings from `activeProjectContext`.
+3.  **Report**: I will provide a success or failure report.
+    *   **On Success**: "✅ TECHNICAL VALIDATION COMPLETE. You may now proceed to BUILD mode. Type 'BUILD' to begin implementation."
+    *   **On Failure**: I will list the issues and suggest fixes. BUILD mode will be blocked until QA passes. You will need to re-run `VAN QA` after fixing issues.
+
+---
+
+## 🔄 AUTOMATIC JIRA TASK SYNCHRONIZATION (Applies when modes involving Jira are active)
+
+*   **System Action**: At the beginning of modes like PLAN, IMPLEMENT, REFLECT (and potentially VAN if a task is identified early), I may automatically check the status of tasks in `tasks.md` against their status in Jira for the relevant contexts.
+*   **Proposed Edits**: If I find discrepancies (e.g., a task is marked as done in Jira but not in `tasks.md`), I will **propose an edit** to `tasks.md` to align it.
+*   **User Approval**: You will need to **approve** any proposed file edits.
+*   This helps keep `tasks.md` (our local source of truth for task lists across contexts) up-to-date.
+
+---
+
+## 📊 OVERALL SYSTEM WORKFLOW (Mermaid Diagram)
+
+This diagram shows how VAN mode (including VAN QA) fits into the larger system and interacts with other modes and Memory Bank files. It reflects the multi-context awareness and the central role of `integration_config.md` and `tasks.md`.
+
+```mermaid
+graph TD
+    Start["User Command (e.g., VAN, PLAN, VAN QA)"] --> ReadGlobalConfig["1. Read integration_config.md"]
+    ReadGlobalConfig --> SelectActiveContext["2. Select ActiveProjectContext"]
+    SelectActiveContext --> ModeDispatch{"3. Dispatch to Mode Specific Logic"}
+
+    ModeDispatch --> VAN["VAN Mode Logic<br>(van_mode_split/van-mode-map.mdc)"]
+    ModeDispatch --> PLAN["PLAN Mode Logic<br>(plan-mode-map.mdc)"]
+    ModeDispatch --> CREATIVE["CREATIVE Mode Logic<br>(creative-mode-map.mdc)"]
+    ModeDispatch --> IMPLEMENT["IMPLEMENT Mode Logic<br>(implement-mode-map.mdc)"]
+    ModeDispatch --> QA["VAN QA Logic<br>(van-qa-main.mdc)"]
+    ModeDispatch --> REFLECT_ARCHIVE["REFLECT+ARCHIVE Logic<br>(reflect_archive_instructions.md)"]
+
+    subgraph "All Modes Interact With (via activeProjectContext where applicable)"
+        Jira["Jira API (MCP)"]
+        Confluence["Confluence API (MCP)"]
+        GitLab["GitLab (devops-tools)"]
+        Vercel["Vercel (devops-tools)"]
+        TasksMD["tasks.md (Multi-Context Task List)"]
+        MemoryBankFiles["Other Memory Bank Files<br>(projectbrief.md, activeContext.md, etc.)"]
+    end
+
+    VAN -->|Determine Complexity| TaskComplexity
+    TaskComplexity -->|L1| IMPLEMENT
+    TaskComplexity -->|L2-L4| PLAN
+    
+    PLAN --> CREATIVE
+    CREATIVE --> QA
+    QA -->|Pass| IMPLEMENT
+    QA -->|Fail| QA %% Loop to fix issues
+    IMPLEMENT --> REFLECT_ARCHIVE
+    REFLECT_ARCHIVE -->|Archive Complete| Start 
+
+    %% Data Flow Example
+    PLAN --> TasksMD
+    IMPLEMENT --> TasksMD
+    Jira --> TasksMD
+    TasksMD --> Jira
+    
+    %% Styling
+    style Start fill:#f8d486,stroke:#e8b84d
+    style ReadGlobalConfig fill:#D5E8D4,stroke:#82B366
+    style SelectActiveContext fill:#D5E8D4,stroke:#82B366
+    style ModeDispatch fill:#DAE8FC,stroke:#6C8EBF
+    style Jira fill:#E1D5E7,stroke:#9673A6
+    style Confluence fill:#E1D5E7,stroke:#9673A6
+    style GitLab fill:#E1D5E7,stroke:#9673A6
+    style Vercel fill:#E1D5E7,stroke:#9673A6
+    style TasksMD fill:#FFD966,stroke:#B3A240,stroke-width:2px
+    style MemoryBankFiles fill:#FFE6CC,stroke:#D79B00
+```
+
+## 🔑 KEY FILES AND CONCEPTS
+
+*   **`integration_config.md`**: Central configuration for all project contexts, Jira/Confluence/DevOps keys, and global rules. **You need to set this up.**
+*   **`activeProjectContext`**: The specific project configuration (from `integration_config.md`) you are currently working on. I will ask you to select this.
+*   **`tasks.md`**: Your local, multi-context list of tasks. I help keep this in sync with Jira for the contexts you work on. Each task line clearly indicates its Jira Project Key, ID, Story Points, and its Project Context name.
+*   **`/docs/architecture.md`**: A central document for system architecture. I will help create a basic version if it's missing, specific to your active project context.
+*   **MCP Tools**: I use these tools (e.g., `mcp_mcp-atlassian_jira_get_issue`) to interact with Jira semi-autonomously, always asking for your confirmation before making changes.
+*   **DevOps Tools (`devops-tools/`)**: Scripts for GitLab and Vercel are used for CI/CD checks, again, with your approval and within the selected `activeProjectContext`.
+
+## VERIFICATION COMMITMENT
+
+```
+┌─────────────────────────────────────────────────────┐
+│ I WILL follow the appropriate visual process map for │
+│ VAN mode (van_mode_split/van-mode-map.mdc or        │
+│ van-qa-main.mdc for QA).                            │
+│ I WILL always ask for the activeProjectContext.     │
+│ I WILL guide you based on task complexity.          │
+│ I WILL use MCP tools for Jira interactions with     │
+│ your approval.                                      │
+│ I WILL help manage tasks.md in a multi-context way. │
+└─────────────────────────────────────────────────────┘
 ``` 

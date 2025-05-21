@@ -3,49 +3,37 @@ description: Visual process map for BUILD mode (Code Implementation)
 globs: implementation-mode-map.mdc
 alwaysApply: false
 ---
-# BUILD MODE: CODE EXECUTION PROCESS MAP
+# BUILD MODE (IMPLEMENT): CODE EXECUTION PROCESS MAP (Multi-Context)
 
-> **TL;DR:** This visual map guides the BUILD mode process, focusing on efficient code implementation based on the planning and creative phases, with proper command execution and progress tracking.
+> **TL;DR:** Guides implementation for a task selected from `tasks.md` (within a chosen Project Context), tracks progress in Jira, updates `tasks.md`, and integrates with DevOps tools.
 
 ## 🧭 BUILD MODE PROCESS FLOW
 
 ```mermaid
 graph TD
-    Start["IMPLEMENT Mode Start"] --> AutoSync["Step 1: Auto-Sync Completed Tasks"]
-    AutoSync --> TaskSelect["Step 2: Select Task for Implementation"]
-    TaskSelect --> CheckName["Step 3: Check Name & Propose Fixes"]
-    CheckName --> CheckStatusAssignee["Step 4: Check Status/Assignee & Propose Updates"]
-    CheckStatusAssignee --> UpdateTasksMD["Step 5: Propose tasks.md Update"]
-    UpdateTasksMD --> GitBranch["Step 6: Propose Git Branch Creation"]
-    GitBranch --> Implementation["Step 7: Execute Implementation Steps"]
-    Implementation --> GitFinalize["Step 8: Propose Git Commit/Merge"]
-    GitFinalize --> SuggestNext["Step 9: Suggest Next Mode (QA/REFLECT)"]
+    Start["IMPLEMENT Mode Start"] --> ReadGlobalConfig["Step 0.1: Read Global Configs"]
+    ReadGlobalConfig --> SelectActiveContext["Step 0.2: Select Active Project Context"]
+    SelectActiveContext --> AutoSyncTasksMD["Step 1: Auto-Sync tasks.md with Jira (for all contexts)"]
+    AutoSyncTasksMD --> TaskSelect["Step 2: Select Task from tasks.md for Implementation (filtered by active context)"]
+    TaskSelect --> JiraStatusAssigneeCheck["Step 3: Check Jira Status/Assignee & Propose Updates (for selected task in its context)"]
+    JiraStatusAssigneeCheck --> UpdateTasksMDWithJiraStatus["Step 3.1: Update tasks.md with Jira Status/Assignee"]
+    UpdateTasksMDWithJiraStatus --> GitBranch["Step 4: Propose Git Branch Creation (using Jira key)"]
+    GitBranch --> Implementation["Step 5: Execute Implementation Steps"]
+    Implementation --> UpdateTasksMDWithProgress["Step 5.1: Update tasks.md with Implementation Progress"]
+    UpdateTasksMDWithProgress --> GitFinalize["Step 6: Propose Git Commit/Merge & DevOps Checks (using task's context)"]
+    GitFinalize --> FinalTasksMDUpdate["Step 6.1: Mark Task as Implementation Complete in tasks.md"]
+    FinalTasksMDUpdate --> SuggestNext["Step 7: Suggest Next Mode (QA/REFLECT)"]
     SuggestNext --> End["IMPLEMENT Mode End"]
 ```
 
-## 📋 REQUIRED FILE STATE VERIFICATION
-
-Before implementation can begin, verify file state:
-
-```mermaid
-graph TD
-    Start["File State<br>Verification"] --> CheckTasks{"tasks.md has<br>planning complete?"}
-    
-    CheckTasks -->|"No"| ErrorPlan["ERROR:<br>Return to PLAN Mode"]
-    CheckTasks -->|"Yes"| CheckLevel{"Task<br>Complexity?"}
-    
-    CheckLevel -->|"Level 1"| L1Ready["Ready for<br>Implementation"]
-    
-    CheckLevel -->|"Level 2"| L2Ready["Ready for<br>Implementation"]
-    
-    CheckLevel -->|"Level 3-4"| CheckCreative{"Creative phases<br>required?"}
-    
-    CheckCreative -->|"No"| L34Ready["Ready for<br>Implementation"]
-    CheckCreative -->|"Yes"| VerifyCreative{"Creative phases<br>completed?"}
-    
-    VerifyCreative -->|"No"| ErrorCreative["ERROR:<br>Return to CREATIVE Mode"]
-    VerifyCreative -->|"Yes"| L34Ready
-```
+## 📋 REQUIRED FILE STATE VERIFICATION (Adapted)
+*   **Instruction for AI**: Verification should focus on:
+    1.  `activeProjectContext` is selected by the user.
+    2.  `tasks.md` exists and is readable.
+    3.  A task (`selectedTaskLine` from `tasks.md`) is chosen for implementation, and it belongs to the `activeProjectContext` (its `(Context: ...)` matches `activeProjectContext.context_name`).
+    4.  The Jira issue ID (`selectedJiraIssueKey`) can be parsed from `selectedTaskLine`.
+    5.  Relevant planning (`plan-[selectedJiraIssueKey].md`) and creative (`creative-[selectedJiraIssueKey].md`) documents exist if task complexity (derived from `tasks.md` SP or Jira) implies they were needed.
+    6.  The Jira issue `selectedJiraIssueKey` is in a state ready for implementation (e.g., 'To Do', or a status from `activeProjectContext.jira_status_mapping` like `CREATIVE` or `PLAN` completion).
 
 ## 🔄 FILE SYSTEM VERIFICATION PROCESS
 
@@ -280,86 +268,106 @@ When the build is complete, notify user with:
 
 ## DETAILED STEPS
 
-### Step 1: Auto-Sync Completed Tasks
-*   *(Logic similar to Step 1 in VAN Mode)*
+### Step 0.1: Read Global Configs
+*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, and `tasks.md` format.
 
-### Step 2: Select Task for Implementation
-*   **Action**: Ask user: "Do you have a specific task ID for implementation? Otherwise, I will search for tasks in 'To Do'/'In Progress' status."
-*   **Condition**: If user provides an ID: Store `issue_key`.
-*   **Condition**: If user does not provide ID:
-    *   **Action**: Call `mcp_mcp-atlassian_jira_search` with JQL like `status IN ('To Do', 'In Development') AND assignee = currentUser() ORDER BY updated DESC`, limit 5-10, fields=summary,status.
-    *   **Action**: Present list to user.
-    *   **Action**: Ask user to select task ID.
-    *   Store selected `issue_key`.
-*   **Error Handling**: If no task selected, stop.
-*   **Report**: Confirm task: "Task [issue_key] - [Name] selected."
+### Step 0.2: Select Active Project Context
+*   **Action**: (As defined in previous updates - user selects `activeProjectContext`).
+*   **Action**: Store `selectedJiraProjectKey = activeProjectContext.jira_project_key`, `selectedJiraStatusMapping = activeProjectContext.jira_status_mapping`, `selectedContextName = activeProjectContext.context_name`, etc.
 
-### Step 3: Check Name & Propose Fixes
-*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `issue_key` (fields: summary).
-*   **Action**: Compare Jira summary with name in `tasks.md`.
-*   **Condition**: If discrepancy:
-    *   **Action**: Propose `edit_file` for `tasks.md`.
-    *   **Action**: Wait for approval.
+### Step 1: Auto-Sync tasks.md with Jira (for all contexts)
+*   **Action**: Read `tasks.md` line by line.
+    *   For each line, parse `JIRA_PROJECT_KEY_FROM_TASK`, `JIRA_ISSUE_ID_FROM_TASK`, `CONTEXT_NAME_FROM_TASK` and current local status checkbox `[ ]` or `[x]`.
+    *   Find the corresponding `Project Context` in `integration_config.md` using `CONTEXT_NAME_FROM_TASK` or `JIRA_PROJECT_KEY_FROM_TASK`.
+    *   If context found, call `mcp_mcp-atlassian_jira_get_issue` for `JIRA_ISSUE_ID_FROM_TASK` in its specific project to get its current status in Jira.
+    *   Compare Jira status with local status. If Jira status indicates completion (e.g., matches a "Done" or "Closed" status in the task's context `jira_status_mapping`) and local is `[ ]`, propose `edit_file` for `tasks.md` to mark it `[x]`.
+*   **Report**: "`tasks.md` sync check complete. Proposed updates if any."
 
-### Step 4: Check Status/Assignee & Propose Updates
-*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `issue_key` (fields: status, assignee).
-*   **Condition**: If status is 'In Progress' AND assignee is NOT `currentUser()`:
-    *   **Action**: Report **STOP** (Conflict: Task already in progress by another user). Stop process.
-*   **Condition**: If status is NOT 'In Progress':
-    *   **Action**: Propose `jira_transition_issue` to 'In Progress'.
-*   **Condition**: If assignee is NOT `currentUser()`:
-    *   **Action**: Propose `jira_update_issue` to set assignee to `currentUser()`.
-*   **Action**: Wait for user approval of any proposed MCP actions.
+### Step 2: Select Task from tasks.md for Implementation (filtered by active context)
+*   **Action**: Read `tasks.md`.
+*   **Action**: Filter tasks: display only those lines where `(Context: [selectedContextName])` is present AND status is not yet `[x]` (not done).
+*   **Action**: Ask user: "Please select a task to implement for project context '[selectedContextName]' from the list below, or provide a Jira Issue Key (e.g., [selectedJiraProjectKey]-123):\n[Filtered list from tasks.md]"
+*   **Condition**: If user selects a line from `tasks.md`:
+    *   **Action**: Store the full line as `selectedTaskLine`.
+    *   **Action**: Parse `selectedJiraIssueKey` (e.g., "ALPHA-123") and `taskTitle` from `selectedTaskLine`.
+*   **Condition**: If user provides a Jira Issue Key:
+    *   **Action**: Verify it belongs to `selectedJiraProjectKey`. Store as `selectedJiraIssueKey`.
+    *   **Action**: Attempt to find a matching line in `tasks.md`. If found, store as `selectedTaskLine`. If not, `selectedTaskLine` is null (task might be new to local tracking).
+    *   Fetch task title from Jira for `selectedJiraIssueKey`.
+*   **Error Handling**: If no task selected/identified, stop.
+*   **Report**: "Implementing: [selectedJiraIssueKey] - [taskTitle] for context '[selectedContextName]'."
 
-### Step 5: Propose tasks.md Update
-*   **Condition**: If Step 4 resulted in successful Jira update(s):
-    *   **Action**: Propose `edit_file` on `tasks.md` to update status/assignee for the `issue_key`.
-    *   **Action**: Wait for approval.
+### Step 3: Check Jira Status/Assignee & Propose Updates (for selected task in its context)
+*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: status, assignee).
+*   **Action**: Let `implementStatus = selectedJiraStatusMapping.IMPLEMENT` (e.g., "In Progress") for the `activeProjectContext`.
+*   **Condition**: If current Jira status is `implementStatus` AND assignee is NOT `currentUser()`: STOP (Conflict).
+*   **Condition**: If current Jira status is NOT `implementStatus`: Propose `mcp_mcp-atlassian_jira_transition_issue` to `implementStatus`.
+*   **Condition**: If current Jira assignee is NOT `currentUser()`: Propose `mcp_mcp-atlassian_jira_update_issue` to assign to `currentUser()`.
+*   **Action**: Wait for approval. If changes made, set `jiraStatusChanged = true`.
 
-### Step 6: Propose Git Branch Creation
-*   **Action**: Ask user: "It is recommended to create a separate Git branch. Suggest command? (`git checkout -b feature/[issue_key]`)"
+### Step 3.1: Update `tasks.md` with Jira Status/Assignee
+*   **Condition**: If `jiraStatusChanged` is true AND `selectedTaskLine` is not null:
+    *   **Action**: Propose `edit_file` for `tasks.md` to update the status part (e.g., if it was `[ ]` and task is now In Progress, it remains `[ ]`, but ensure consistency) of `selectedTaskLine`. (Assignee is not typically in `tasks.md` line, but Jira status might imply it's no longer just 'To Do').
+    *   **Report**: "`tasks.md` updated to reflect current Jira status for [selectedJiraIssueKey]."
+*   **Condition**: If `selectedTaskLine` is null (Jira key entered manually, not in `tasks.md` yet):
+    *   **Action**: Formulate new task line for `tasks.md` using details from Jira (Key, Title, SP from description, context `selectedContextName`).
+    *   **Action**: Propose `edit_file` to append this new line to `tasks.md`.
+    *   **Report**: "[selectedJiraIssueKey] added to `tasks.md`."
+
+### Step 4: Propose Git Branch Creation (considering Epic branch, using Jira key)
+*   **Action**: Fetch parent Epic key for `selectedJiraIssueKey`. Let this be `parentEpicKey` (can be null).
+*   **Action**: Let `defaultGitBranch = activeProjectContext.gitlab_default_branch`.
+*   **Action**: Initialize `baseBranch = defaultGitBranch`.
+*   **Condition**: If `parentEpicKey` is not null:
+    *   **Action**: Let `epicBranchName = "epic/[parentEpicKey]"`.
+    *   **Action**: Ask user: "Task [selectedJiraIssueKey] may be part of Epic [parentEpicKey]. Does a Git branch '[epicBranchName]' exist for this Epic, and should the new task branch be based on it? If unsure, or if no epic branch exists, we will use '[defaultGitBranch]'."
+    *   **Condition**: If user confirms `epicBranchName` exists and should be used:
+        *   Set `baseBranch = epicBranchName`.
+        *   **Action**: (Optional: Propose `git checkout [epicBranchName]` and `git pull` to ensure it's up-to-date if user isn't already on it).
+*   **Action**: Let `featureBranchName = "feature/[selectedJiraIssueKey]-implementation"` (or `-bugfix/`, `-hotfix/` depending on task type if discernible).
+*   **Action**: Ask user: "It's recommended to work in a dedicated Git branch. Propose creating/switching to branch '[featureBranchName]' from '[baseBranch]'?"
 *   **Condition**: If user agrees:
-    *   **Action**: Propose `run_terminal_cmd` with the git command.
+    *   **Action**: Propose `run_terminal_cmd` with `git checkout -b [featureBranchName] [baseBranch]`.
+    *   **(Error Handling Note for AI)**: If `baseBranch` (especially an epic branch) doesn't exist locally, `git checkout -b` will fail if `baseBranch` is not `defaultGitBranch`. The AI should handle this by falling back to `defaultGitBranch` and informing the user, or asking the user to create/pull the epic branch first.
     *   **Action**: Wait for approval.
+*   **Report**: "Git branch '[featureBranchName]' proposed/created from '[baseBranch]'."
 
-### Step 7: Execute Implementation Steps
-*   **Action**: Read the implementation plan (e.g., `implementation-plan-[issue_key].md`).
-*   **Action**: Follow the plan, potentially involving `read_file`, `edit_file`, `run_terminal_cmd` for building/testing.
-*   **Interaction**: Guide user through implementation steps, asking for confirmations or providing code snippets.
-*   **Report**: Inform user on progress of implementation.
+### Step 5: Execute Implementation Steps
+*   **Action**: Read relevant planning/creative documents if they exist (e.g., `plan-[selectedJiraIssueKey].md`, `creative-[selectedJiraIssueKey].md`).
+*   **Action**: Follow the plan, guide user through code changes, file creation/edits, tests. Use `edit_file`, `run_terminal_cmd` as needed.
+*   **Interaction**: AI assists with code, user confirms changes.
+*   **Report**: Inform user on progress.
 
-### Step 8: Propose Git Commit/Merge
-*   **Action**: Ask user: "Implementation complete? Suggest Git commands for commit and merge?"
+### Step 5.1: Update `tasks.md` with Implementation Progress (Optional)
+*   **Action**: After significant sub-steps of implementation, AI can propose updating the description part of `selectedTaskLine` in `tasks.md` to note progress (e.g., appending "- API endpoint created"). This is optional and user-driven.
+
+### Step 6: Propose Git Commit/Merge & DevOps Checks (using task's context)
+*   **Action**: Ask user: "Implementation for [selectedJiraIssueKey] complete? Suggest Git commands?"
 *   **Condition**: If user agrees:
-    *   **Action**: Propose `run_terminal_cmd` for `git add .`
-    *   **Action**: Propose `run_terminal_cmd` for `git commit -m "feat([issue_key]): Description of changes"` (request description from user).
-    *   **Action**: Propose `run_terminal_cmd` for `git push origin <branch_name>` (request branch name from user).
-    *   **Action**: Propose `run_terminal_cmd` for `git checkout main` (or develop).
-    *   **Action**: Propose `run_terminal_cmd` for `git pull origin main`.
-    *   **Action**: Propose `run_terminal_cmd` for `git merge --no-ff <branch_name>`.
-    *   **Action**: Propose `run_terminal_cmd` for `git push origin main`.
-    *   **Instruction**: Remind user about resolving potential merge conflicts.
-    *   **Instruction**: Mention creating a Pull Request as an alternative.
-*   **Action**: Wait for user approval for each proposed command.
-*   **----> NEW: Check GitLab Pipeline <----**
-*   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/gitlab/gitlab_tools.py check-pipeline main` (script to check the latest pipeline for the branch).
-*   **Action**: Wait for approval and check output for success/failure indication.
-*   **----> NEW: Check Vercel Deployment (Conditional) <----**
-*   **Condition**: If GitLab pipeline check was successful (needs ability to parse previous command's output or user confirmation):
-    *   **Action**: Ask user: "Do you use Vercel for deployments? Would you like to check the status of the latest Vercel production deployment?"
+    *   Propose `git add .`, `git commit -m "feat([selectedJiraIssueKey]): Description of changes"` (get description from user), `git push origin feature/[selectedJiraIssueKey]`.
+    *   Propose `git checkout [activeProjectContext.gitlab_default_branch]`, `git pull origin [activeProjectContext.gitlab_default_branch]`, `git merge --no-ff feature/[selectedJiraIssueKey]`, `git push origin [activeProjectContext.gitlab_default_branch]`.
+    *   Remind about merge conflicts, PR alternative.
+*   **Action**: Wait for approval for each command.
+*   **GitLab Pipeline Check**:
+    *   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_project_id]` (Assuming gitlab_project_id can be a repo URL or an ID the script handles).
+    *   **Action**: Wait for approval and check output.
+*   **Vercel Deployment Check (Conditional & Optional)**:
+    *   **Condition**: If GitLab pipeline successful AND `activeProjectContext.vercel_project_id` is defined AND `activeProjectContext.vercel_project_id` is not null or empty.
+    *   **Action**: Ask user: "Project '[activeProjectContext.context_name]' is configured for Vercel (ID: [activeProjectContext.vercel_project_id]). Would you like to check its production deployment status?"
     *   **Condition**: If user agrees:
-        *   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/vercel/vercel_tools.py status --prod`
-        *   **Action**: Wait for approval.
-    *   **Action**: (Optional) Ask user: "Would you like to initiate a new production deployment on Vercel?"
-    *   **Condition**: If user agrees:
-        *   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/vercel/vercel_tools.py deploy --prod`
-        *   **Action**: Wait for approval.
+        *   **Action**: Propose `run_terminal_cmd`: `python devops-tools/vercel/vercel_tools.py status --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]` (if team_id is configured).
+        *   **Action**: (Optional) Ask user: "Would you like to trigger a new Vercel production deployment for '[activeProjectContext.context_name]'?"
+        *   **Condition**: If user agrees:
+            *   **Action**: Propose `run_terminal_cmd`: `python devops-tools/vercel/vercel_tools.py deploy --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]` (if team_id is configured).
 
-### Step 9: Suggest Next Mode (QA/REFLECT)
-*   **Action**: Update `tasks.md` (via proposed `edit_file`) to indicate implementation completion.
-*   **Reminder**: "If the implementation **affected the architecture** (e.g., new components added, data flows changed), don't forget to update /docs/architecture.md. You can ask me to help with this."
-*   **Report**: "Implementation complete. Recommended next step: [QA/REFLECT] Mode. Enter '[QA/REFLECT]' to proceed."
-*   *(Logic for choosing QA or REFLECT may depend on the process)*
+### Step 6.1: Update `tasks.md` to Reflect Implementation Stage Completion
+*   **Action**: After Git & DevOps checks are done (or skipped by user):
+    *   **Action**: Propose `edit_file` for `tasks.md` to update `selectedTaskLine` by appending a note like "- Implementation phase complete, pending QA/Reflection." to its description. The checkbox `[ ]` should remain unchanged at this stage.
+*   **Report**: "`tasks.md` status for [selectedJiraIssueKey] noted as 'Implementation phase complete, pending QA/Reflection'."
 
-### Step 10: IMPLEMENT Mode End
+### Step 7: Suggest Next Mode (QA/REFLECT)
+*   **Reminder**: "If implementation for [selectedJiraIssueKey] affected architecture, update `/docs/architecture.md` (for context '[activeProjectContext.context_name]')."
+*   **Report**: "Implementation for [selectedJiraIssueKey] complete. Recommended next: [QA/REFLECT] Mode."
+
+### Step 8: IMPLEMENT Mode End
 *   Wait for user command. 

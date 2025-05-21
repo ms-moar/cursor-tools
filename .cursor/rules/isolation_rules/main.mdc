@@ -5,6 +5,10 @@ alwaysApply: false
 ---
 # 🔍 ISOLATION-FOCUSED MEMORY BANK SYSTEM
 
+🚨 CRITICAL RULE: MEMORY BANK CREATION IS MANDATORY 🚨
+Memory Bank MUST be created BEFORE any other operation in ANY mode
+NO process can continue without verifying Memory Bank existence
+
 > **TL;DR:** This system is designed to work with Cursor custom modes, where each mode loads only the rules it needs. The system uses visual Mermaid diagrams and selective document loading to optimize context usage.
 
 ## 🧭 MODE-SPECIFIC VISUAL MAPS
@@ -27,16 +31,46 @@ graph TD
     Archive -.->|"Loads"| ArchiveRules["• main.md<br>• archiving-guide.md"]
 ```
 
+## 📋 MEMORY BANK VERIFICATION - MANDATORY IN ALL MODES
+
+```mermaid
+graph TD
+    Start["Mode Activation"] --> CheckMemBank{"Memory Bank<br>Exists?"}
+    
+    CheckMemBank -->|"No"| CreateMemBank["CREATE MEMORY BANK<br>[CRITICAL STEP]"]
+    CheckMemBank -->|"Yes"| VerifyMemBank["Verify Memory Bank<br>Structure"]
+    
+    CreateMemBank --> VerifyCreation{"Creation<br>Successful?"}
+    VerifyCreation -->|"No"| AbortAll["⛔ ABORT ALL OPERATIONS<br>Fix Memory Bank First"]
+    VerifyCreation -->|"Yes"| VerifyMemBank
+    
+    VerifyMemBank --> StructureCheck{"Structure<br>Valid?"}
+    StructureCheck -->|"No"| FixStructure["Fix Memory Bank<br>Structure"]
+    StructureCheck -->|"Yes"| ContinueMode["Continue with<br>Mode Operations"]
+    
+    FixStructure --> VerifyFix{"Fix<br>Successful?"}
+    VerifyFix -->|"No"| AbortAll
+    VerifyFix -->|"Yes"| ContinueMode
+    
+    style CheckMemBank fill:#ff0000,stroke:#990000,color:white,stroke-width:3px
+    style CreateMemBank fill:#ff0000,stroke:#990000,color:white,stroke-width:3px
+    style VerifyCreation fill:#ff0000,stroke:#990000,color:white,stroke-width:3px
+    style AbortAll fill:#ff0000,stroke:#990000,color:white,stroke-width:3px
+    style StructureCheck fill:#ff0000,stroke:#990000,color:white,stroke-width:3px
+    style FixStructure fill:#ff5555,stroke:#dd3333,color:white
+    style VerifyFix fill:#ff5555,stroke:#dd3333,color:white
+```
+
 ## 📚 VISUAL PROCESS MAPS
 
 Each mode has its own visual process map:
 
-- [VAN Mode Map](mdc:visual-maps/van-mode-map.md)
-- [PLAN Mode Map](mdc:visual-maps/plan-mode-map.md)
-- [CREATIVE Mode Map](mdc:visual-maps/creative-mode-map.md)
-- [IMPLEMENT Mode Map](mdc:visual-maps/implement-mode-map.md)
-- [REFLECT Mode Map](mdc:visual-maps/reflect-mode-map.md)
-- [ARCHIVE Mode Map](mdc:visual-maps/archive-mode-map.md)
+- @VAN Mode Map
+- @PLAN Mode Map
+- @CREATIVE Mode Map
+- @IMPLEMENT Mode Map
+- @REFLECT Mode Map
+- @ARCHIVE Mode Map
 
 ## 🔄 FILE STATE VERIFICATION
 
@@ -119,35 +153,22 @@ grep "TODO" $(find . -name "*.js")
 npm install && npm start
 ```
 
-Refer to [command-execution.md](mdc:Core/command-execution.md) for detailed guidance.
+Refer to [command-execution.mdc](mdc:.cursor/rules/isolation_rules/Core/command-execution.mdc) for detailed guidance. 
+
+## 🗣️ AI COMMUNICATION PROTOCOL
+
+**Instruction for AI:** You **MUST** start every message to the user with the following line, replacing `[Current Working Directory]` with the actual current working directory relative to the project root, or the absolute path if outside the project root:
+
+`**📂 Проект: cursor-memory-bank | Папка: [Current Working Directory]**`
+
+This ensures clarity about the context of your operations at all times.
 
 ## 🔒 MANDATORY SECURITY RULES
 
-When working with files in the project, the following rules must be observed:
+When working with files in the project, the following rules **MUST** be observed by the AI:
 
-1. Before deleting any file for any reason, its backup copy must be created in the `backup-files/` folder.
-2. If the `backup-files/` directory is missing, it must be created automatically.
-3. Backup file name format: `{original_filename}_{timestamp}.bak`
+1.  **Backup Before Deletion**: Before deleting any file for any reason, its backup copy **MUST** be created in the `backup-files/` folder.
+2.  **Create Backup Directory**: If the `backup-files/` directory is missing, it **MUST** be created automatically by the AI before attempting to save a backup.
+3.  **Backup File Naming**: The backup file name format **MUST** be: `{original_filename}_{timestamp}.bak`. The timestamp should be in `YYYYMMDDHHMMSS` format (e.g., `myfile.txt_20240515103000.bak`).
 
-## 📝 AI COMMUNICATION PROTOCOL
-
-Every response from the AI assistant MUST begin with project identification in the following format:
-
-```
-**📂 Проект: cursor-memory-bank | Папка: [Current Working Directory]**
-```
-
-Where:
-- `[Current Working Directory]` is the absolute path to the workspace retrieved from shell or environment.
-- This header MUST appear at the very beginning of each message.
-- This header MUST be formatted in bold with the folder emoji (📂).
-- This header MUST be separated from the main content by a blank line.
-
-Example:
-```
-**📂 Проект: cursor-memory-bank | Папка: C:/Users/Username/cursor-memory-bank**
-
-[Main message content begins here...]
-```
-
-This helps maintain context awareness during complex multi-step operations and ensures clarity about which project and location the AI is currently working with. 
+These rules are critical for data safety and project integrity. 
