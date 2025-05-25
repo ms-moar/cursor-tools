@@ -8,6 +8,7 @@ import os
 import re
 import json
 import requests
+import yaml
 from datetime import datetime
 from pathlib import Path
 
@@ -19,6 +20,7 @@ class AutoChatSummaryProcessor:
         self.index_file = self.base_dir / "chat-index.md"
         self.prompt_file = self.base_dir / "summary-prompt.md"
         self.config_file = self.base_dir / "config.json"
+        self.integration_config_file = self.base_dir.parent / "integration_config.json"
         
         # Создаем папку chat-summary если её нет
         self.chats_dir.mkdir(parents=True, exist_ok=True)
@@ -26,8 +28,40 @@ class AutoChatSummaryProcessor:
         # Загружаем конфигурацию
         self.config = self.load_config()
     
+    def load_integration_config(self):
+        """Загружает конфигурацию из integration_config.json"""
+        if not self.integration_config_file.exists():
+            return None
+        
+        try:
+            with open(self.integration_config_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Ищем YAML блоки с контекстами проектов
+            yaml_blocks = re.findall(r'```yaml\n(.*?)\n```', content, re.DOTALL)
+            
+            for yaml_block in yaml_blocks:
+                # Пропускаем примеры
+                if 'YOUR_PROJECT_NAME' in yaml_block or 'My Project' in yaml_block:
+                    continue
+                
+                try:
+                    contexts = yaml.safe_load(yaml_block)
+                    if isinstance(contexts, list) and len(contexts) > 0:
+                        # Возвращаем первый реальный контекст
+                        context = contexts[0]
+                        if context.get('deepseek_api_key') and 'YOUR_' not in str(context.get('deepseek_api_key')):
+                            return context
+                except:
+                    continue
+            
+            return None
+        except Exception as e:
+            print(f"Ошибка чтения integration_config.json: {e}")
+            return None
+    
     def load_config(self):
-        """Загружает конфигурацию из файла"""
+        """Загружает конфигурацию из файлов"""
         default_config = {
             "deepseek_api_key": "",
             "max_tokens": 4000,
@@ -36,18 +70,34 @@ class AutoChatSummaryProcessor:
             "api_base": "https://api.deepseek.com"
         }
         
+        # Сначала пытаемся загрузить из integration_config.json
+        integration_config = self.load_integration_config()
+        if integration_config:
+            print("✓ Загружена конфигурация DeepSeek из integration_config.json")
+            config = {
+                "deepseek_api_key": integration_config.get("deepseek_api_key", ""),
+                "model": integration_config.get("deepseek_model", "deepseek-chat"),
+                "max_tokens": default_config["max_tokens"],
+                "temperature": default_config["temperature"],
+                "api_base": default_config["api_base"]
+            }
+            return config
+        
+        # Если не найдено в integration_config.json, используем config.json
         if self.config_file.exists():
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     config = json.load(f)
+                    print("✓ Загружена конфигурация DeepSeek из config.json")
                     return {**default_config, **config}
             except:
                 pass
         
-        # Обновляем файл конфигурации
+        # Создаем файл конфигурации если его нет
         with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump(default_config, f, indent=2, ensure_ascii=False)
         
+        print("⚠️  Используется конфигурация по умолчанию")
         return default_config
     
     def load_processed_chats(self):
@@ -88,7 +138,8 @@ class AutoChatSummaryProcessor:
         api_key = self.config.get("deepseek_api_key", "")
         
         if not api_key:
-            print("API ключ DeepSeek не настроен в config.json")
+            print("API ключ DeepSeek не настроен")
+            print("Настройте ключ в integration_config.json или config.json")
             return None
         
         # Обрезаем контент если он слишком длинный (DeepSeek поддерживает больше токенов)
@@ -367,7 +418,10 @@ class AutoChatSummaryProcessor:
         # Проверяем API ключ
         if not self.config.get("deepseek_api_key"):
             print("⚠️  API ключ DeepSeek не настроен!")
-            print("Отредактируйте файл config.json и добавьте ваш API ключ DeepSeek.")
+            print("Настройте ключ одним из способов:")
+            print("1. Добавьте в integration_config.json в секцию 'Ваши контексты':")
+            print("   deepseek_api_key: 'ваш_ключ'")
+            print("2. Или отредактируйте файл config.json")
             print("Получить ключ можно на: https://platform.deepseek.com/")
             return
         

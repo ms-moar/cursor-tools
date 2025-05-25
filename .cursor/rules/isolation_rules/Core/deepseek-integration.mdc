@@ -20,7 +20,7 @@ alwaysApply: false
 
 ### 1. Configuration Reading
 При обнаружении trigger keywords:
-1. **ОБЯЗАТЕЛЬНО** прочитать файл `integration_config.md`
+1. **ОБЯЗАТЕЛЬНО** прочитать файл `integration_config.json`
 2. Извлечь настройки DeepSeek из активного project context:
    - `deepseek_api_key`
    - `deepseek_model` 
@@ -29,7 +29,7 @@ alwaysApply: false
 ### 2. Context Selection
 Если определено несколько project contexts:
 1. Спросить пользователя: "Какой проект контекст использовать для DeepSeek?"
-2. Предложить варианты из `integration_config.md`
+2. Предложить варианты из `integration_config.json`
 3. Сохранить выбор для текущей сессии
 
 ### 3. Model Selection Logic
@@ -57,7 +57,7 @@ alwaysApply: false
 - Стратегическое планирование
 
 ### 4. API Configuration
-Использовать параметры из `integration_config.md`:
+Использовать параметры из `integration_config.json`:
 ```
 API_KEY: {deepseek_api_key}
 MODEL: {deepseek_model}
@@ -66,14 +66,14 @@ BASE_URL: {deepseek_base_url}
 
 ### 5. Error Handling
 Если настройки отсутствуют или некорректны:
-1. Сообщить пользователю: "Настройки DeepSeek не найдены в integration_config.md"
+1. Сообщить пользователю: "Настройки DeepSeek не найдены в integration_config.json"
 2. Предложить добавить конфигурацию
 3. Показать пример настройки
 
 ## Implementation Rules
 
 ### Обязательные действия:
-1. **ВСЕГДА** читать `integration_config.md` перед использованием DeepSeek
+1. **ВСЕГДА** читать `integration_config.json` перед использованием DeepSeek
 2. **НИКОГДА** не использовать hardcoded API ключи
 3. **ВСЕГДА** выбирать подходящую модель автоматически
 4. **ОБЯЗАТЕЛЬНО** уведомлять пользователя о выбранной модели
@@ -88,7 +88,7 @@ BASE_URL: {deepseek_base_url}
 
 ### Безопасность:
 - Никогда не выводить API ключи в логи или сообщения
-- Использовать только настройки из `integration_config.md`
+- Использовать только настройки из `integration_config.json`
 - Проверять валидность конфигурации перед использованием
 
 ## Integration with Memory Bank Modes
@@ -115,7 +115,7 @@ BASE_URL: {deepseek_base_url}
 ## Example Usage Flow
 
 1. Пользователь: "Давай сделаем это через дипсик"
-2. AI читает `integration_config.md`
+2. AI читает `integration_config.json`
 3. AI выбирает контекст (если нужно)
 4. AI определяет тип задачи и модель
 5. AI уведомляет о конфигурации

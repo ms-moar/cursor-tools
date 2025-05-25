@@ -31,21 +31,22 @@
 **Ваши контексты:**
 
 ```yaml
-- context_name: "YOUR_PROJECT_NAME"
-  description: "Описание вашего проекта"
-  jira_project_key: "YOUR_KEY"
+- context_name: "Cursor Memory Bank"
+  description: "Система управления памятью для Cursor IDE"
+  jira_project_key: "CMB"
   jira_default_issue_type: "Story"
   jira_status_mapping:
     PLAN: "Backlog"
     IMPLEMENT_START: "In Progress"
     IMPLEMENT_COMPLETE: "Done"
     ARCHIVE: "Closed"
-  confluence_space_key: "YOUR_SPACE"
-  gitlab_project_id: "YOUR_GITLAB_ID"
+  confluence_space_key: "CMBDOCS"
+  gitlab_project_id: "cursor_memory_bank"
   gitlab_default_branch: "main"
-  vercel_project_id: "YOUR_VERCEL_ID"
-  deepseek_api_key: "YOUR_DEEPSEEK_KEY"
+  vercel_project_id: "cursor_memory_bank"
+  deepseek_api_key: "ваш_реальный_ключ_здесь"
   deepseek_model: "deepseek-chat"
+  jira_login: "ВАШ_JIRA_ЛОГИН"
 ```
 
 ## DeepSeek AI Integration

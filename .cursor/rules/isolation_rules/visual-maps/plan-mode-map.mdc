@@ -8,6 +8,13 @@ alwaysApply: false
 ## OVERVIEW
 This mode uses the AI's Large Language Model (LLM) capabilities to analyze the project goal and context, then propose a high-level plan structured into Epics, Sprints, and Tasks, including definitive Story Point (SP) estimations. The output is a plan for review, subsequent Jira issue creation based on a user-selected Project Context, updating the local `tasks.md` file, and optionally creating a Git branch for processed Epics.
 
+**Key Enhancements:**
+- AI-powered plan generation with automatic Story Point estimation
+- Duplicate task checking in Jira
+- Epic and Sprint workflow support
+- Multi-context project support
+- Automatic synchronization with tasks.md
+
 ## WORKFLOW
 
 ```mermaid
@@ -29,17 +36,17 @@ graph TD
 ### Step 1: Auto-Sync Tasks (Jira & tasks.md)
 *   **(Optional) Action**: Read `tasks.md` line by line.
     *   For each line, parse `JIRA_PROJECT_KEY`, `JIRA_ISSUE_ID`, and current local status.
-    *   Find the corresponding `Project Context` in `integration_config.md` using `JIRA_PROJECT_KEY`.
+    *   Find the corresponding `Project Context` in `integration_config.json` using `JIRA_PROJECT_KEY`.
     *   Call `mcp_mcp-atlassian_jira_get_issue` for `JIRA_ISSUE_ID` in its specific project to get its current status in Jira.
     *   Compare Jira status with local status. If different and Jira status is a "completed" one (e.g., matches `ARCHIVE` or `REFLECT` status in the context's `jira_status_mapping`), propose `edit_file` for `tasks.md` to update the status for that line.
 *   **Report**: Briefly report sync results.
 
 ### Step 2: Read Global Project Context & Configs
 *   **Action**: Read relevant general context files (e.g., `projectbrief.md` if global, user's initial request for planning).
-*   **Action**: Read `integration_config.md` to get the list of all `Project Contexts` and global settings (like SP formula and `tasks.md` format info).
+*   **Action**: Read `integration_config.json` to get the list of all `Project Contexts` and global settings (like SP formula and `tasks.md` format info).
 
 ### Step 2.1: Select Active Project Context
-*   **Action**: Let `definedContexts` be the list of `Project Contexts` read from `integration_config.md`.
+*   **Action**: Let `definedContexts` be the list of `Project Contexts` read from `integration_config.json`.
 *   **Condition**: If `definedContexts` contains more than one context:
     *   **Action**: Extract `context_name` from each defined context.
     *   **Action**: Ask user: "For which project context are we planning new tasks? Please select from: [List of `context_name`s]."
@@ -48,7 +55,7 @@ graph TD
     *   **Action**: Automatically select this single context as `activeProjectContext`.
     *   **Report**: "Using project context: '[activeProjectContext.context_name]' for new tasks."
 *   **Condition**: If `definedContexts` is empty or not found:
-    *   **Report**: "ERROR: No project contexts are defined in `integration_config.md`. Please configure at least one project context."
+    *   **Report**: "ERROR: No project contexts are defined in `integration_config.json`. Please configure at least one project context."
     *   **Action**: Stop PLAN mode.
 *   **Action**: Let `selectedJiraProjectKey = activeProjectContext.jira_project_key`.
 *   **Action**: Let `selectedJiraDefaultIssueType = activeProjectContext.jira_default_issue_type`.
@@ -63,9 +70,15 @@ graph TD
     1.  Identify 2-5 major logical blocks of work (**Epics**). Give each a clear name.
     2.  For **each Epic**, propose a list of **specific, actionable tasks** (including name and a brief description for each task if possible).
     3.  Group tasks into sequential **Sprints** (e.g., 3-7 tasks each). Name the Sprints.
-    4.  **For each task, provide a FINAL Story Point (SP) estimation.** Base this on task complexity. For reference: in this project, 1 SP is approximately 8 developer hours or 10 AI minutes of intensive work (refer to global settings in `integration_config.md` for the exact formula). This SP estimation is definitive. Ensure SPs are presented with the prefix `SP_VALUE=` (e.g., `SP_VALUE=3`, `SP_VALUE=0.5`).
+    4.  **For each task, provide a FINAL Story Point (SP) estimation.** Base this on task complexity. For reference: in this project, 1 SP is approximately 8 developer hours or 10 AI minutes of intensive work (refer to global settings in `integration_config.json` for the exact formula). This SP estimation is definitive. Ensure SPs are presented with the prefix `SP_VALUE=` (e.g., `SP_VALUE=3`, `SP_VALUE=0.5`).
     5.  Format the plan using Markdown: Level 2 headings (`##`) for Epics, Level 3 (`###`) for Sprints, and lists (`- [Task Name] - [Task Description (optional)] - SP_VALUE=[X]`) for tasks. **Do NOT include Jira IDs or context names in this generated plan text, as those will be added later.**"
 *   **(Internal LLM Execution)**: AI model processes and generates the plan (Epic -> Sprint -> Task List with Name, SP in SP_VALUE=X format, Description).
+
+### Step 4.1: Check for Duplicate Tasks in Jira (AI Action)
+*   **Action**: Search Jira for existing tasks with similar titles in the selected project context.
+*   **Action**: Compare generated task names with existing Jira issues.
+*   **Action**: Report potential duplicates and ask user for confirmation before proceeding.
+*   **Report**: "Duplicate check complete. [X] potential duplicates found."
 
 ### Step 5: Output Generated Plan with Final SP
 *   **Action**: Output the complete plan generated by LLM.
@@ -96,7 +109,7 @@ graph TD
 *   **Report**: "Jira issue creation/update process completed for project context '[selectedContextName]'."
 
 ### Step 5.2: Update Local `tasks.md` File
-*   **Action**: Read `integration_config.md` for the `tasks.md` line format (which now includes `SP_VALUE=[X]`).
+*   **Action**: Read `integration_config.json` for the `tasks.md` line format (which now includes `SP_VALUE=[X]`).
 *   **Action**: For each entry in `createdOrUpdatedJiraIssues`:
     *   **Condition**: If `is_epic_only` is true for an Epic entry:
         *   Formulate the `tasks.md` line: `- [ ] **[[selectedJiraProjectKey]:[epic.jira_id]]** [EPIC] [epic.title] - *Tasks in description* - SP_VALUE=[epic.sp_value] (Context: [selectedContextName])`

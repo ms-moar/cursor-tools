@@ -4,7 +4,7 @@ This document describes the main changes made to the `cursor-memory-bank` projec
 
 ## New Files
 
-*   **`integration_config.md`**:
+*   **`integration_config.json`**:
     *   Created for centralized storage of integration settings.
     *   Contains placeholders for the Jira project key (`YOUR_JIRA_PROJECT_KEY`) and Confluence space key (`YOUR_CONFLUENCE_SPACE_KEY`).
     *   Includes the default Jira issue type (`Story`).
@@ -14,7 +14,7 @@ This document describes the main changes made to the `cursor-memory-bank` projec
 ## Changed Files
 
 *   **`.cursor/rules/isolation_rules/visual-maps/plan-mode-map.mdc`**:
-    *   Added a step to read settings from `integration_config.md`.
+    *   Added a step to read settings from `integration_config.json`.
     *   Added logic to request **existing** Jira components and labels from the user.
     *   Added semi-autonomous logic for working with Epics:
         *   Request from the user if the task is related to an Epic.
@@ -26,26 +26,26 @@ This document describes the main changes made to the `cursor-memory-bank` projec
     *   Added notes on MCP error handling (retry).
 
 *   **`.cursor/rules/isolation_rules/visual-maps/creative-mode-map.mdc`**:
-    *   Added a step to read settings from `integration_config.md` (Jira status, Confluence space key).
+    *   Added a step to read settings from `integration_config.json` (Jira status, Confluence space key).
     *   Added logic to read the Jira issue ID from `tasks.md`.
     *   Added a call to `mcp_mcp-atlassian_jira_update_issue` to update the Jira issue status according to settings.
     *   Added a call to `mcp_mcp-atlassian_confluence_create_page` to create a design documentation page in the configured Confluence space.
     *   Added notes on MCP error handling.
 
 *   **`.cursor/rules/isolation_rules/visual-maps/qa-mode-map.mdc`**:
-    *   Added a step to read settings from `integration_config.md` (Jira status for successful QA).
+    *   Added a step to read settings from `integration_config.json` (Jira status for successful QA).
     *   Added logic to read the Jira issue ID from `tasks.md`.
     *   Added a call to `mcp_mcp-atlassian_jira_update_issue` to update the Jira issue status upon successful validation.
     *   Added notes on MCP error handling.
 
 *   **`.cursor/rules/isolation_rules/visual-maps/reflect-mode-map.mdc`**:
-    *   Added a step to read settings from `integration_config.md` (Jira status for reflection completion).
+    *   Added a step to read settings from `integration_config.json` (Jira status for reflection completion).
     *   Added logic to read the Jira issue ID from `tasks.md`.
     *   Added a call to `mcp_mcp-atlassian_jira_update_issue` to update the Jira issue status.
     *   Added notes on MCP error handling.
 
 *   **`.cursor/rules/isolation_rules/visual-maps/archive-mode-map.mdc`**:
-    *   Added a step to read settings from `integration_config.md` (Confluence space key).
+    *   Added a step to read settings from `integration_config.json` (Confluence space key).
     *   Added logic to check/create the `docs/archive/` directory.
     *   Added logic to create a local summary file in `docs/archive/` using the Jira issue ID.
     *   Added a call to `mcp_mcp-atlassian_confluence_create_page` to create/update a summary page in the configured Confluence space.
@@ -54,7 +54,7 @@ This document describes the main changes made to the `cursor-memory-bank` projec
 
 ## Important Notes
 
-*   Before using the system, you **must configure** the `integration_config.md` file, specifying the actual Jira and Confluence keys.
+*   Before using the system, you **must configure** the `integration_config.json` file, specifying the actual Jira and Confluence keys.
 *   For the local documentation saving step in `ARCHIVE` mode to work correctly, ensure that the `docs/` folder exists at the project root or will be created.
 *   There were issues saving changes to `plan-mode-map.mdc`; an attempt was made to reapply the changes. It is recommended to check this file.
 
@@ -92,7 +92,7 @@ A new `devops-tools` folder has been added to the project with tools to support 
     *   Added user verification step to confirm if Vercel is used in the project.
 
 *   **Configuration Updates:**
-    *   Enhanced `integration_config.md` with GitLab and Vercel configuration sections.
+    *   Enhanced `integration_config.json` with GitLab and Vercel configuration sections.
     *   Updated instructions to include the setup of DevOps tools.
 
 *   **Automatic Backup Before Deletion:**

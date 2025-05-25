@@ -7,6 +7,13 @@ alwaysApply: false
 
 > **TL;DR:** Guides implementation for a task selected from `tasks.md` (within a chosen Project Context), tracks progress in Jira, updates `tasks.md`, and integrates with DevOps tools.
 
+**Key Enhancements:**
+- DevOps integration (GitLab CI/CD)
+- Standardized commit message format
+- Epic-aware Git workflow
+- Multi-context project support
+- Automated pipeline checks
+
 ## 🧭 BUILD MODE PROCESS FLOW
 
 ```mermaid
@@ -269,7 +276,7 @@ When the build is complete, notify user with:
 ## DETAILED STEPS
 
 ### Step 0.1: Read Global Configs
-*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, and `tasks.md` format.
+*   **Action**: Read `integration_config.json` for `Project Contexts`, global settings, and `tasks.md` format.
 
 ### Step 0.2: Select Active Project Context
 *   **Action**: (As defined in previous updates - user selects `activeProjectContext`).
@@ -278,7 +285,7 @@ When the build is complete, notify user with:
 ### Step 1: Auto-Sync tasks.md with Jira (for all contexts)
 *   **Action**: Read `tasks.md` line by line.
     *   For each line, parse `JIRA_PROJECT_KEY_FROM_TASK`, `JIRA_ISSUE_ID_FROM_TASK`, `CONTEXT_NAME_FROM_TASK` and current local status checkbox `[ ]` or `[x]`.
-    *   Find the corresponding `Project Context` in `integration_config.md` using `CONTEXT_NAME_FROM_TASK` or `JIRA_PROJECT_KEY_FROM_TASK`.
+    *   Find the corresponding `Project Context` in `integration_config.json` using `CONTEXT_NAME_FROM_TASK` or `JIRA_PROJECT_KEY_FROM_TASK`.
     *   If context found, call `mcp_mcp-atlassian_jira_get_issue` for `JIRA_ISSUE_ID_FROM_TASK` in its specific project to get its current status in Jira.
     *   Compare Jira status with local status. If Jira status indicates completion (e.g., matches a "Done" or "Closed" status in the task's context `jira_status_mapping`) and local is `[ ]`, propose `edit_file` for `tasks.md` to mark it `[x]`.
 *   **Report**: "`tasks.md` sync check complete. Proposed updates if any."
@@ -351,14 +358,10 @@ When the build is complete, notify user with:
 *   **GitLab Pipeline Check**:
     *   **Action**: Propose `run_terminal_cmd` command: `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_project_id]` (Assuming gitlab_project_id can be a repo URL or an ID the script handles).
     *   **Action**: Wait for approval and check output.
-*   **Vercel Deployment Check (Conditional & Optional)**:
-    *   **Condition**: If GitLab pipeline successful AND `activeProjectContext.vercel_project_id` is defined AND `activeProjectContext.vercel_project_id` is not null or empty.
-    *   **Action**: Ask user: "Project '[activeProjectContext.context_name]' is configured for Vercel (ID: [activeProjectContext.vercel_project_id]). Would you like to check its production deployment status?"
-    *   **Condition**: If user agrees:
-        *   **Action**: Propose `run_terminal_cmd`: `python devops-tools/vercel/vercel_tools.py status --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]` (if team_id is configured).
-        *   **Action**: (Optional) Ask user: "Would you like to trigger a new Vercel production deployment for '[activeProjectContext.context_name]'?"
-        *   **Condition**: If user agrees:
-            *   **Action**: Propose `run_terminal_cmd`: `python devops-tools/vercel/vercel_tools.py deploy --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]` (if team_id is configured).
+*   **Additional DevOps Checks (Optional)**:
+    *   **Action**: Check for additional deployment configurations if defined in `activeProjectContext`.
+    *   **Action**: Validate deployment readiness and configuration files.
+    *   **Report**: "DevOps checks completed for context '[activeProjectContext.context_name]'."
 
 ### Step 6.1: Update `tasks.md` to Reflect Implementation Stage Completion
 *   **Action**: After Git & DevOps checks are done (or skipped by user):

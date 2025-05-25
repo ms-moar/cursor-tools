@@ -7,6 +7,13 @@ alwaysApply: false
 
 > **TL;DR:** Guides structured design decision-making for a task selected from `tasks.md` (within a chosen Project Context), syncing with Jira.
 
+**Key Enhancements:**
+- Simplified structure with focus on integrations
+- Jira and Confluence integration
+- Epic-aware Git workflow
+- Multi-context project support
+- Streamlined creative process
+
 ## 🧭 CREATIVE MODE PROCESS FLOW
 
 ```mermaid
@@ -155,7 +162,7 @@ Use these visual markers for creative phases:
 ## 🎨 DETAILED CREATIVE WORKFLOW STEPS
 
 ### Step 0.1: Read Global Configs
-*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, `tasks.md` format.
+*   **Action**: Read `integration_config.json` for `Project Contexts`, global settings, `tasks.md` format.
 
 ### Step 0.2: Select Active Project Context
 *   **Action**: (As defined previously - user selects `activeProjectContext`).
@@ -211,7 +218,11 @@ Use these visual markers for creative phases:
 *   **Report**: "Git branch '[featureBranchName]' proposed/created from '[baseBranch]'."
 
 ### Step 5: Execute Creative Design Process
-*   (As previously defined, using `selectedJiraIssueKey` for docs like `creative-docs/creative-[selectedJiraIssueKey].md`)
+*   **Action**: Create design document `creative-docs/creative-[selectedJiraIssueKey].md`.
+*   **Action**: Document multiple design options with pros/cons analysis.
+*   **Action**: Make final design decision with clear rationale.
+*   **Action**: Include implementation notes and architectural considerations.
+*   **Optional**: Create Confluence page for design documentation using `activeProjectContext.confluence_space_key`.
 
 ### Step 5.1: Update `tasks.md` with Creative Phase Progress/Completion
 *   **Action**: After creative work (e.g., design document `creative-[selectedJiraIssueKey].md` is created/updated):

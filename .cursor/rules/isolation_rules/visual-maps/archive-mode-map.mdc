@@ -3,15 +3,22 @@ description: Visual process map for ARCHIVE mode (Task Documentation)
 globs: "**/archive*/**", "**/document*/**", "**/complete*/**"
 alwaysApply: false
 ---
-# ARCHIVE MODE: TASK DOCUMENTATION PROCESS MAP
+# ARCHIVE MODE: TASK DOCUMENTATION PROCESS MAP (Multi-Context)
 
 > **TL;DR:** This visual map guides the ARCHIVE mode process, focusing on creating comprehensive documentation of the completed task, archiving relevant files, and updating the Memory Bank for future reference.
+
+**Key Enhancements:**
+- Multi-context project support
+- Confluence integration for documentation
+- GitLab release tag creation
+- Context-aware archive organization
+- Jira status finalization
 
 ## 🧭 ARCHIVE MODE PROCESS FLOW
 
 ```mermaid
 graph TD
-    Start["START ARCHIVE MODE"] --> ReadGlobalConfig["Step 0.1: Read Global Configs<br>(integration_config.md)"]
+    Start["START ARCHIVE MODE"] --> ReadGlobalConfig["Step 0.1: Read Global Configs<br>(integration_config.json)"]
     ReadGlobalConfig --> SelectActiveContext["Step 0.2: Select Active Project Context"]
     SelectActiveContext --> IdentifyTaskToArchive["Step 0.3: Identify Task to Archive<br>(from tasks.md or Jira ID for active context)"]
     IdentifyTaskToArchive --> ReadRelevantDocs["Read tasks.md, reflection.md for selected task<br>and progress.md"]
@@ -32,8 +39,7 @@ graph TD
 
     CreateLocalArchiveDoc --> UpdateConfluence["Step X.1: Create/Update Confluence Page<br>(using activeProjectContext.confluence_space_key)"]
     UpdateConfluence --> GitLabTag["Step X.2: Create GitLab Release Tag (Optional)<br>(using activeProjectContext.gitlab_project_id)"]
-    GitLabTag --> VercelArchiveCheck["Step X.3: Vercel Archive Check (Optional)<br>(using activeProjectContext.vercel_project_id)"]
-    VercelArchiveCheck --> JiraUpdate["Step X.4: Update Jira Issue Status to Final<br>(e.g., Closed/Archived from activeProjectContext.jira_status_mapping)"]
+    GitLabTag --> JiraUpdate["Step X.3: Update Jira Issue Status to Final<br>(e.g., Closed/Archived from activeProjectContext.jira_status_mapping)"]
     JiraUpdate --> UpdateTasksMD["Update tasks.md: Mark as [x] COMPLETED<br> (ensure context is correct)"]
     UpdateTasksMD --> UpdateProgressMD["Update progress.md<br>with archive links & final status"]    
     UpdateProgressMD --> UpdateActiveContext["Update activeContext.md<br>Reset for Next Task"]
@@ -241,7 +247,6 @@ And ensure the section in `tasks.md` looks like:
 - Local Archive document created in `docs/archive/[context_name]/[task_id].md`? [YES/NO]
 - Confluence page created/updated (using context specific space key)? [YES/NO/NA]
 - GitLab release tag created (using context specific project ID)? [YES/NO/NA]
-- Vercel checks performed (using context specific project ID)? [YES/NO/NA]
 - Jira issue status updated to final (e.g., Closed)? [YES/NO]
 - tasks.md marked as COMPLETED with correct context? [YES/NO]
 - progress.md updated with archive reference? [YES/NO]
