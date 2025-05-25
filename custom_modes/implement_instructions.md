@@ -1,147 +1,242 @@
-# MEMORY BANK IMPLEMENT MODE (BUILD)
+# MEMORY BANK BUILD MODE
 
-This document provides instructions for the **IMPLEMENT Mode** (often referred to as BUILD mode). This mode is where you will write code and make actual changes to the project based on the plans and designs from previous modes (PLAN, CREATIVE). All operations will be performed within a selected Project Context.
-
----
-
-## 🚀 STARTING IMPLEMENT MODE
-
-When you activate IMPLEMENT mode:
-
-1.  **AI Reads Configuration**: I will first read `integration_config.md` to understand available project contexts and global settings.
-2.  **Select Project Context**: 
-    *   I will ask you: "For which project context are we implementing? Please select from: [List of context names from `integration_config.md`]."
-    *   The selected context (`activeProjectContext`) will guide Jira interactions, DevOps settings, and `tasks.md` filtering.
-3.  **Automatic Jira Task Synchronization (for `activeProjectContext`)**: 
-    *   I will read `tasks.md` and check tasks associated with `activeProjectContext.context_name` against their status in Jira (using `activeProjectContext.jira_project_key`).
-    *   If I find discrepancies, I will propose an edit to `tasks.md`.
-
----
-
-## 🛠️ PREPARATION FOR IMPLEMENTATION (for a selected task)
-
-1.  **Identify Task for Implementation**:
-    *   I will ask you to select a task from `tasks.md` (filtered by `activeProjectContext.context_name` and typically marked as ready for implementation, e.g., after PLAN or CREATIVE/VAN QA) or provide a Jira Issue Key (e.g., `[activeProjectContext.jira_project_key]-XXX`).
-    *   Let this be `selectedJiraIssueKey` and `selectedTaskTitle`.
-2.  **Jira Status & Assignee Check (Semi-Automated for `selectedJiraIssueKey`)**:
-    *   I will fetch the current status and assignee for `selectedJiraIssueKey` from Jira (`activeProjectContext.jira_project_key`).
-    *   Expected status might be 'To Do', or a status indicating creative/QA is complete (e.g., from `activeProjectContext.jira_status_mapping.CREATIVE_COMPLETE` or `QA_PASS`).
-    *   If the task is already "In Progress" by another user in Jira, we **MUST STOP** unless you confirm reassignment.
-    *   I will **propose (via MCP tool calls) to transition** `selectedJiraIssueKey` to the appropriate "In Progress" status (e.g., `activeProjectContext.jira_status_mapping.IMPLEMENT_START`) and **assign it to you** (`currentUser()`) if it's not already.
-    *   You need to **approve** these Jira changes.
-    *   After successful Jira updates, I will propose edits to `tasks.md` to reflect the changes for `selectedJiraIssueKey` (within its context).
-3.  **Jira Task Name Sync (Semi-Automated for `selectedJiraIssueKey`)**: 
-    *   I will compare `selectedTaskTitle` with the summary of `selectedJiraIssueKey` in Jira.
-    *   If they don't match, I will propose an edit to `tasks.md` to align the title (requires your approval).
-4.  **Create New Git Branch (considering Epic branch)**: 
-    *   I will fetch the parent Epic key for `selectedJiraIssueKey` (let's call it `parentEpicKey`).
-    *   A default base branch will be `activeProjectContext.gitlab_default_branch`.
-    *   If `parentEpicKey` exists, I will ask: "Task [selectedJiraIssueKey] seems to be part of Epic [parentEpicKey]. Is there an existing Git branch like 'epic/[parentEpicKey]' that we should use as a base for the new task branch? If not, or if you're unsure, we'll use '[activeProjectContext.gitlab_default_branch]'."
-    *   Based on your input, a `baseBranch` will be determined (either the epic branch or the default context branch).
-    *   For isolating changes, I will **strongly recommend creating a new Git branch** for `selectedJiraIssueKey`.
-    *   I will propose a branch name like `feature/[selectedJiraIssueKey]-implementation` or `bugfix/[selectedJiraIssueKey]-fix-details`, following the typical project format `тип/ID-задачи-краткое-описание`. For example, for a feature:
-    *   I will propose the command: `git checkout -b feature/[selectedJiraIssueKey]-implementation [baseBranch]`. Ensure the chosen name accurately reflects the task and adheres to our project's branch naming standards.
-
-**Proceed with actual coding only after these preparatory steps are complete and your Git branch is ready.**
-
----
-
-## 💻 IMPLEMENTATION STEPS (AI-Assisted Coding)
-
-1.  **Review Plans & Designs**: I will help you review `implementation-plan.md` (if exists), relevant `creative-docs/creative-[selectedJiraIssueKey]-*.md` files, and `/docs/architecture.md` (for `activeProjectContext.context_name`).
-2.  **Code Implementation**: 
-    *   You will write the code. I can assist with generating snippets, explaining concepts, or debugging.
-    *   I will use `edit_file` to apply changes you approve.
-    *   I will use `run_terminal_cmd` for build steps, tests, etc., as needed, with your approval.
-3.  **Track Progress in `tasks.md`**: I can help you update the description of `selectedJiraIssueKey` in `tasks.md` to reflect sub-task completion or general progress (e.g., "- API endpoint for X created and tested.").
-
----
-
-## ✅ COMPLETING IMPLEMENTATION (for `selectedJiraIssueKey`)
-
-Once you believe the implementation for `selectedJiraIssueKey` is complete:
-
-1.  **Final Code Review & Local Tests**: Ensure all code is clean, commented where necessary, and local unit/integration tests pass.
-2.  **Git Commit & Push**:
-    *   I will propose `git add .`.
-    *   Then, for the commit message, we should use the standard project format: `[ID-задачи] тип: Краткое описание изменений` (or `тип: Описание` if no ID). I can help you craft this message. For example: `git commit -m "feat([selectedJiraIssueKey]): Implement user login functionality"`. I can assist in generating a compliant commit message.
-    *   I will then propose: `git push origin feature/[selectedJiraIssueKey]-implementation` (or your actual branch name).
-3.  **Merge to Default Branch**: 
-    *   I will propose switching to `activeProjectContext.gitlab_default_branch` (e.g., `main` or `develop`), pulling latest changes, and merging your feature branch (e.g., `git merge --no-ff feature/[selectedJiraIssueKey]-implementation`).
-    *   I will remind you about resolving potential merge conflicts.
-    *   Then, `git push origin [activeProjectContext.gitlab_default_branch]`.
-    *   Alternatively, I will remind you about creating a Pull/Merge Request as per your team's workflow.
-4.  **DevOps Checks (using `activeProjectContext` settings)**:
-    *   **GitLab Pipeline**: I will propose checking the GitLab pipeline status for `activeProjectContext.gitlab_default_branch` using `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_project_id]`.
-    *   **Vercel Deployment (Optional)**: If `activeProjectContext.vercel_project_id` is configured, I will ask if you want to check the Vercel deployment status or trigger a new deployment using `python devops-tools/vercel/vercel_tools.py ...` with context-specific IDs.
-5.  **Update Jira Task Status**: 
-    *   I will propose updating the status of `selectedJiraIssueKey` in Jira to indicate implementation is complete (e.g., `activeProjectContext.jira_status_mapping.IMPLEMENT_COMPLETE`, which might map to 'In Review' or 'Ready for QA'). Requires your approval via MCP.
-6.  **Update `tasks.md`**: 
-    *   I will propose an edit to `tasks.md` for `selectedJiraIssueKey` to note "- Implementation Complete, pending QA/Reflection." The main checkbox `[ ]` likely remains unchanged until ARCHIVE.
-7.  **Update Architecture Document**: If the implementation significantly affected the architecture for `activeProjectContext.context_name`, I will remind you to update `/docs/architecture.md`.
-8.  **Transition**: I will suggest transitioning to `REFLECT` mode (or `QA` if that's a separate explicit step in your workflow before reflection).
-
----
-
-## 📊 OVERALL SYSTEM WORKFLOW (Mermaid Diagram)
-
-(This diagram is illustrative and also present in van_instructions.md; it shows IMPLEMENT mode in context)
+Your role is to build the planned changes following the implementation plan and creative phase decisions.
 
 ```mermaid
 graph TD
-    Start["User Command (e.g., VAN, PLAN, IMPLEMENT)"] --> ReadGlobalConfig["1. Read integration_config.md"]
-    ReadGlobalConfig --> SelectActiveContext["2. Select ActiveProjectContext"]
-    SelectActiveContext --> ModeDispatch{"3. Dispatch to Mode Specific Logic"}
-
-    ModeDispatch --> VAN["VAN Mode Logic"]
-    ModeDispatch --> PLAN["PLAN Mode Logic"]
-    ModeDispatch --> CREATIVE["CREATIVE Mode Logic"]
-    ModeDispatch --> IMPLEMENT["IMPLEMENT Mode Logic<br>(implement-mode-map.mdc)"]
-    ModeDispatch --> QA["VAN QA Logic"]
-    ModeDispatch --> REFLECT_ARCHIVE["REFLECT+ARCHIVE Logic"]
-
-    subgraph "IMPLEMENT Mode Interacts With (via activeProjectContext)"
-        Jira_Impl["Jira API (MCP)"]
-        Git_Impl["Git Commands"]
-        DevOps_Impl["DevOps Tools (GitLab, Vercel)"]
-        TasksMD_Impl["tasks.md"]
-        CodeFiles["Project Code Files"]
-        ArchitectureMD_Impl["/docs/architecture.md"]
-    end
+    Start["🚀 START BUILD MODE"] --> ReadDocs["📚 Read Reference Documents<br>.cursor/rules/isolation_rules/Core/command-execution.mdc"]
     
-    IMPLEMENT --> Jira_Impl
-    IMPLEMENT --> Git_Impl
-    IMPLEMENT --> DevOps_Impl
-    IMPLEMENT --> TasksMD_Impl
-    IMPLEMENT --> CodeFiles
-    IMPLEMENT --> ArchitectureMD_Impl
-
-    QA --> IMPLEMENT
-    IMPLEMENT --> REFLECT_ARCHIVE
-
+    %% Initialization
+    ReadDocs --> CheckLevel{"🧩 Determine<br>Complexity Level<br>from tasks.md"}
+    
+    %% Level 1 Implementation
+    CheckLevel -->|"Level 1<br>Quick Bug Fix"| L1Process["🔧 LEVEL 1 PROCESS<br>.cursor/rules/isolation_rules/visual-maps/implement-mode-map.mdc"]
+    L1Process --> L1Review["🔍 Review Bug<br>Report"]
+    L1Review --> L1Examine["👁️ Examine<br>Relevant Code"]
+    L1Examine --> L1Fix["⚒️ Implement<br>Targeted Fix"]
+    L1Fix --> L1Test["✅ Test<br>Fix"]
+    L1Test --> L1Update["📝 Update<br>tasks.md"]
+    
+    %% Level 2 Implementation
+    CheckLevel -->|"Level 2<br>Simple Enhancement"| L2Process["🔨 LEVEL 2 PROCESS<br>.cursor/rules/isolation_rules/visual-maps/implement-mode-map.mdc"]
+    L2Process --> L2Review["🔍 Review Build<br>Plan"]
+    L2Review --> L2Examine["👁️ Examine Relevant<br>Code Areas"]
+    L2Examine --> L2Implement["⚒️ Implement Changes<br>Sequentially"]
+    L2Implement --> L2Test["✅ Test<br>Changes"]
+    L2Test --> L2Update["📝 Update<br>tasks.md"]
+    
+    %% Level 3-4 Implementation
+    CheckLevel -->|"Level 3-4<br>Feature/System"| L34Process["🏗️ LEVEL 3-4 PROCESS<br>.cursor/rules/isolation_rules/visual-maps/implement-mode-map.mdc"]
+    L34Process --> L34Review["🔍 Review Plan &<br>Creative Decisions"]
+    L34Review --> L34Phase{"📋 Select<br>Build<br>Phase"}
+    
+    %% Implementation Phases
+    L34Phase --> L34Phase1["⚒️ Phase 1<br>Build"]
+    L34Phase1 --> L34Test1["✅ Test<br>Phase 1"]
+    L34Test1 --> L34Document1["📝 Document<br>Phase 1"]
+    L34Document1 --> L34Next1{"📋 Next<br>Phase?"}
+    L34Next1 -->|"Yes"| L34Phase
+    
+    L34Next1 -->|"No"| L34Integration["🔄 Integration<br>Testing"]
+    L34Integration --> L34Document["📝 Document<br>Integration Points"]
+    L34Document --> L34Update["📝 Update<br>tasks.md"]
+    
+    %% Command Execution
+    L1Fix & L2Implement & L34Phase1 --> CommandExec["⚙️ COMMAND EXECUTION<br>.cursor/rules/isolation_rules/Core/command-execution.mdc"]
+    CommandExec --> DocCommands["📝 Document Commands<br>& Results"]
+    
+    %% Implementation Documentation
+    DocCommands -.-> DocTemplate["📋 BUILD DOC:<br>- Code Changes<br>- Commands Executed<br>- Results/Observations<br>- Status"]
+    
+    %% Completion & Transition
+    L1Update & L2Update & L34Update --> VerifyComplete["✅ Verify Build<br>Complete"]
+    VerifyComplete --> UpdateTasks["📝 Final Update to<br>tasks.md"]
+    UpdateTasks --> Transition["⏭️ NEXT MODE:<br>REFLECT MODE"]
+    
+    %% Validation Options
+    Start -.-> Validation["🔍 VALIDATION OPTIONS:<br>- Review build plans<br>- Show code build<br>- Document command execution<br>- Test builds<br>- Show mode transition"]
+    
     %% Styling
-    style IMPLEMENT fill:#cff,stroke:#333,stroke-width:2px;
+    style Start fill:#4da6ff,stroke:#0066cc,color:white
+    style ReadDocs fill:#80bfff,stroke:#4da6ff,color:black
+    style CheckLevel fill:#d94dbb,stroke:#a3378a,color:white
+    style L1Process fill:#4dbb5f,stroke:#36873f,color:white
+    style L2Process fill:#ffa64d,stroke:#cc7a30,color:white
+    style L34Process fill:#ff5555,stroke:#cc0000,color:white
+    style CommandExec fill:#d971ff,stroke:#a33bc2,color:white
+    style VerifyComplete fill:#4dbbbb,stroke:#368787,color:white
+    style Transition fill:#5fd94d,stroke:#3da336,color:white
 ```
 
-## 🔑 KEY CONCEPTS IN IMPLEMENT MODE
+## BUILD STEPS
 
-*   **`activeProjectContext`**: All Jira, Git default branch, and DevOps operations are specific to this context.
-*   **MCP for Jira**: Status changes and assignments in Jira are proposed by me and require your approval.
-*   **Git Workflow**: Emphasis on feature branches, commits linked to Jira keys (and formatted according to project standards), and merging back to the context's default branch (or PRs).
-*   **DevOps Integration**: CI/CD checks are performed using tools and configurations relevant to the `activeProjectContext`.
-*   **Iterative Updates**: `tasks.md` can be updated to reflect granular progress during implementation.
-
-## VERIFICATION COMMITMENT
-
+### Step 1: READ COMMAND EXECUTION RULES
 ```
-┌─────────────────────────────────────────────────────┐
-│ I WILL always ask for the activeProjectContext.     │
-│ I WILL guide the implementation based on plans and  │
-│ designs for the selected task and context.          │
-│ I WILL propose Jira and DevOps actions via MCP or   │
-│ terminal commands, requiring your approval.         │
-│ I WILL assist with Git operations and remind about  │
-│ best practices.                                     │
-│ I WILL help update tasks.md and architecture docs.  │
-└─────────────────────────────────────────────────────┘
+read_file({
+  target_file: ".cursor/rules/isolation_rules/Core/command-execution.mdc",
+  should_read_entire_file: true
+})
 ```
+
+### Step 2: READ TASKS & IMPLEMENTATION PLAN
+```
+read_file({
+  target_file: "tasks.md",
+  should_read_entire_file: true
+})
+
+read_file({
+  target_file: "implementation-plan.md",
+  should_read_entire_file: true
+})
+```
+
+### Step 3: LOAD IMPLEMENTATION MODE MAP
+```
+read_file({
+  target_file: ".cursor/rules/isolation_rules/visual-maps/implement-mode-map.mdc",
+  should_read_entire_file: true
+})
+```
+
+### Step 4: LOAD COMPLEXITY-SPECIFIC IMPLEMENTATION REFERENCES
+Based on complexity level determined from tasks.md, load:
+
+#### For Level 1:
+```
+read_file({
+  target_file: ".cursor/rules/isolation_rules/Level1/workflow-level1.mdc",
+  should_read_entire_file: true
+})
+```
+
+#### For Level 2:
+```
+read_file({
+  target_file: ".cursor/rules/isolation_rules/Level2/workflow-level2.mdc",
+  should_read_entire_file: true
+})
+```
+
+#### For Level 3-4:
+```
+read_file({
+  target_file: ".cursor/rules/isolation_rules/Phases/Implementation/implementation-phase-reference.mdc",
+  should_read_entire_file: true
+})
+
+read_file({
+  target_file: ".cursor/rules/isolation_rules/Level4/phased-implementation.mdc",
+  should_read_entire_file: true
+})
+```
+
+## BUILD APPROACH
+
+Your task is to build the changes defined in the implementation plan, following the decisions made during the creative phases if applicable. Execute changes systematically, document results, and verify that all requirements are met.
+
+### Level 1: Quick Bug Fix Build
+
+For Level 1 tasks, focus on implementing targeted fixes for specific issues. Understand the bug, examine the relevant code, implement a precise fix, and verify that the issue is resolved.
+
+```mermaid
+graph TD
+    L1["🔧 LEVEL 1 BUILD"] --> Review["Review the issue carefully"]
+    Review --> Locate["Locate specific code causing the issue"]
+    Locate --> Fix["Implement focused fix"]
+    Fix --> Test["Test thoroughly to verify resolution"]
+    Test --> Doc["Document the solution"]
+    
+    style L1 fill:#4dbb5f,stroke:#36873f,color:white
+    style Review fill:#d6f5dd,stroke:#a3e0ae,color:black
+    style Locate fill:#d6f5dd,stroke:#a3e0ae,color:black
+    style Fix fill:#d6f5dd,stroke:#a3e0ae,color:black
+    style Test fill:#d6f5dd,stroke:#a3e0ae,color:black
+    style Doc fill:#d6f5dd,stroke:#a3e0ae,color:black
+```
+
+### Level 2: Enhancement Build
+
+For Level 2 tasks, implement changes according to the plan created during the planning phase. Ensure each step is completed and tested before moving to the next, maintaining clarity and focus throughout the process.
+
+```mermaid
+graph TD
+    L2["🔨 LEVEL 2 BUILD"] --> Plan["Follow build plan"]
+    Plan --> Components["Build each component"]
+    Components --> Test["Test each component"]
+    Test --> Integration["Verify integration"]
+    Integration --> Doc["Document build details"]
+    
+    style L2 fill:#ffa64d,stroke:#cc7a30,color:white
+    style Plan fill:#ffe6cc,stroke:#ffa64d,color:black
+    style Components fill:#ffe6cc,stroke:#ffa64d,color:black
+    style Test fill:#ffe6cc,stroke:#ffa64d,color:black
+    style Integration fill:#ffe6cc,stroke:#ffa64d,color:black
+    style Doc fill:#ffe6cc,stroke:#ffa64d,color:black
+```
+
+### Level 3-4: Phased Build
+
+For Level 3-4 tasks, implement using a phased approach as defined in the implementation plan. Each phase should be built, tested, and documented before proceeding to the next, with careful attention to integration between components.
+
+```mermaid
+graph TD
+    L34["🏗️ LEVEL 3-4 BUILD"] --> CreativeReview["Review creative phase decisions"]
+    CreativeReview --> Phases["Build in planned phases"]
+    Phases --> Phase1["Phase 1: Core components"]
+    Phases --> Phase2["Phase 2: Secondary components"]
+    Phases --> Phase3["Phase 3: Integration & polish"]
+    Phase1 & Phase2 & Phase3 --> Test["Comprehensive testing"]
+    Test --> Doc["Detailed documentation"]
+    
+    style L34 fill:#ff5555,stroke:#cc0000,color:white
+    style CreativeReview fill:#ffaaaa,stroke:#ff8080,color:black
+    style Phases fill:#ffaaaa,stroke:#ff8080,color:black
+    style Phase1 fill:#ffaaaa,stroke:#ff8080,color:black
+    style Phase2 fill:#ffaaaa,stroke:#ff8080,color:black
+    style Phase3 fill:#ffaaaa,stroke:#ff8080,color:black
+    style Test fill:#ffaaaa,stroke:#ff8080,color:black
+    style Doc fill:#ffaaaa,stroke:#ff8080,color:black
+```
+
+## COMMAND EXECUTION PRINCIPLES
+
+When building changes, follow these command execution principles for optimal results:
+
+```mermaid
+graph TD
+    CEP["⚙️ COMMAND EXECUTION PRINCIPLES"] --> Context["Provide context for each command"]
+    CEP --> Platform["Adapt commands for platform"]
+    CEP --> Documentation["Document commands and results"]
+    CEP --> Testing["Test changes after implementation"]
+    
+    style CEP fill:#d971ff,stroke:#a33bc2,color:white
+    style Context fill:#e6b3ff,stroke:#d971ff,color:black
+    style Platform fill:#e6b3ff,stroke:#d971ff,color:black
+    style Documentation fill:#e6b3ff,stroke:#d971ff,color:black
+    style Testing fill:#e6b3ff,stroke:#d971ff,color:black
+```
+
+Focus on effective building while adapting your approach to the platform environment. Trust your capabilities to execute appropriate commands for the current system without excessive prescriptive guidance.
+
+## VERIFICATION
+
+```mermaid
+graph TD
+    V["✅ VERIFICATION CHECKLIST"] --> I["All build steps completed?"]
+    V --> T["Changes thoroughly tested?"]
+    V --> R["Build meets requirements?"]
+    V --> D["Build details documented?"]
+    V --> U["tasks.md updated with status?"]
+    
+    I & T & R & D & U --> Decision{"All Verified?"}
+    Decision -->|"Yes"| Complete["Ready for REFLECT mode"]
+    Decision -->|"No"| Fix["Complete missing items"]
+    
+    style V fill:#4dbbbb,stroke:#368787,color:white
+    style Decision fill:#ffa64d,stroke:#cc7a30,color:white
+    style Complete fill:#5fd94d,stroke:#3da336,color:white
+    style Fix fill:#ff5555,stroke:#cc0000,color:white
+```
+
+Before completing the build phase, verify that all build steps have been completed, changes have been thoroughly tested, the build meets all requirements, details have been documented, and tasks.md has been updated with the current status. Once verified, prepare for the reflection phase. 
