@@ -111,11 +111,9 @@ graph TD
         *   Check GitLab CI config (e.g., `.gitlab-ci.yml` in the root or `activeProjectContext.gitlab_ci_config_path` if defined).
         *   Validate CI config: `python devops-tools/gitlab/gitlab_tools.py validate-ci-config [path_to_ci_config] --repo_url [activeProjectContext.gitlab_project_id]`.
         *   Check last pipeline status for `activeProjectContext.gitlab_default_branch`: `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_project_id]`.
-        *   **Condition**: If `activeProjectContext.vercel_project_id` is defined and not empty:
-            *   **Action**: Ask user: "Project '[activeProjectContext.context_name]' is configured for Vercel (ID: [activeProjectContext.vercel_project_id]). Would you like to validate Vercel configuration and deployment status?"
-            *   **Condition**: If user agrees:
-                *   Validate `vercel.json` (in root or `activeProjectContext.vercel_config_path` if defined).
-                *   Optionally check Vercel deployment status for this context: `python devops-tools/vercel/vercel_tools.py status --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]` (if team_id configured).
+        *   **Action**: Validate additional deployment configurations if defined in `activeProjectContext`.
+        *   **Action**: Check deployment readiness and configuration files.
+        *   **Report**: "DevOps validation completed for context '[activeProjectContext.context_name]'."
 
 ### Step 5: Report Results and Prepare for Transition (using selected context)
 *   **Configuration Reading**: Use `selectedJiraProjectKey` and `selectedJiraStatusMapping` from `activeProjectContext`.
@@ -611,7 +609,7 @@ This enhanced QA mode serves as a "quality guardian" throughout the development 
 - **Action**: For IMPLEMENT phase, perform technical validation including dependency, configuration, environment, and build checks AS WELL AS **DevOps Pipeline Validation** as detailed above (using `activeProjectContext`):
   - **Action**: Check for existence and validity of GitLab CI configuration (e.g. `[activeProjectContext.gitlab_ci_config_path]` or default `.gitlab-ci.yml`).
   - **Action**: Validate CI/CD pipeline status using `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_project_id]`.
-  - **Action**: If `activeProjectContext.vercel_project_id` is set, ask about Vercel, then optionally validate `vercel.json` (e.g. `[activeProjectContext.vercel_config_path]` or default) and check deployment status `python devops-tools/vercel/vercel_tools.py status --prod --project_id [activeProjectContext.vercel_project_id] --team_id [activeProjectContext.vercel_team_id]`.
+  - **Action**: Validate additional deployment configurations if defined in `activeProjectContext`.
 
 ### Step 4: Compile Results and Generate Report
 - **Action**: Compile all validation results into a comprehensive report.
