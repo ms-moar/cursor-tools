@@ -1,4 +1,4 @@
-# Memory Bank v0.7-beta
+Cursor-tools + Memory bank
 
 Система управления памятью для разработки с использованием ИИ, оптимизированная для Cursor IDE.
 
