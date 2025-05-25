@@ -82,23 +82,6 @@ QA не является отдельным пользовательским р�
 
 ## Основные файлы и их назначение
 
-```mermaid
-graph LR
-    subgraph "Файлы Memory Bank"
-        Tasks["tasks.md<br>Источник истины"]
-        Active["activeContext.md<br>Текущий фокус"]
-        Progress["progress.md<br>Статус реализации"]
-        Creative["creative-*.md<br>Дизайнерские решения"]
-        Reflect["reflect-*.md<br>Документы обзора"]
-    end
-    
-    style Tasks fill:#f9d77e,stroke:#d9b95c,stroke-width:3px
-    style Active fill:#a8d5ff,stroke:#88b5e0
-    style Progress fill:#c5e8b7,stroke:#a5c897
-    style Creative fill:#f4b8c4,stroke:#d498a4
-    style Reflect fill:#b3e6cc,stroke:#66c999
-```
-
 - **tasks.md**: Центральный источник истины для отслеживания задач
 - **activeContext.md**: Поддерживает фокус текущей фазы разработки
 - **progress.md**: Отслеживает статус реализации
