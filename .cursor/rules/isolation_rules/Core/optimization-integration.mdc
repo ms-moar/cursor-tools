@@ -77,6 +77,14 @@ const optimizationRegistry = {
     file: "Phases/CreativePhase/optimized-creative-template.mdc",
     dependencies: ["hierarchicalRuleLoading", "adaptiveComplexityModel"],
     priority: 5
+  },
+  
+  // Integration optimizations
+  deepseekIntegration: {
+    file: "Core/deepseek-integration.mdc",
+    dependencies: ["hierarchicalRuleLoading"],
+    priority: 6,
+    triggers: ["дипсик", "deepseek", "используй дипсик", "через дипсик", "с помощью дипсика"]
   }
 };
 ```

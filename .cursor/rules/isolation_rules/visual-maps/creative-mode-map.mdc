@@ -217,14 +217,33 @@ Use these visual markers for creative phases:
     *   **Action**: Wait for approval.
 *   **Report**: "Git branch '[featureBranchName]' proposed/created from '[baseBranch]'."
 
-### Step 5: Execute Creative Design Process
-*   **Action**: Create design document `creative-docs/creative-[selectedJiraIssueKey].md`.
-*   **Action**: Document multiple design options with pros/cons analysis.
-*   **Action**: Make final design decision with clear rationale.
-*   **Action**: Include implementation notes and architectural considerations.
-*   **Optional**: Create Confluence page for design documentation using `activeProjectContext.confluence_space_key`.
+### Step 5: Execute Creative Design Process (for selected Jira task)
+*   **Instruction (Prompt for LLM)**: "You are in CREATIVE mode for task '[selectedJiraIssueKey] - [taskTitle]' (Project Context: '[selectedContextName]', Jira Project: '[selectedJiraProjectKey]'). Current Git branch: '[currentGitBranch]'. Review linked planning documents. Guide through UI/UX, Architecture, Data Model, or Algorithm design. Document options, pros/cons, decisions, and implementation notes in 'creative-docs/creative-[selectedJiraIssueKey]-[TYPE].md'. Use Creative Phase Markers."
+*   **(Iterative AI-User Interaction for Design)**
+    *   User specifies creative type (UI/UX, Arch, Data, Algo).
+    *   AI guides user through structured design (problem, options, pros/cons, decision, plan).
+    *   AI uses `edit_file` to create/update `creative-docs/creative-[selectedJiraIssueKey]-[TYPE].md`.
+    *   AI uses `run_terminal_cmd` for any relevant helper commands (e.g., diagram generation if tools allow).
+    *   Creative work is documented iteratively for `selectedJiraIssueKey`.
 
-### Step 5.1: Update `tasks.md` with Creative Phase Progress/Completion
+### Step 5.0.1: (Optional) Update Jira Task Description (AI Assisted)
+*   **Condition**: If user requests to update the Jira task description for `selectedJiraIssueKey`:
+    *   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: description). Let `currentDescription` be the result.
+    *   **Action**: Ask user: "Какое новое описание вы хотите установить для задачи [selectedJiraIssueKey]?"
+    *   **Action**: Let `newDescriptionFromUser` be the user's input.
+    *   **Action**: Let `finalDescription = newDescriptionFromUser`.
+    *   **Action**: Let `aiCreatedNote = "Примечание: Задача создана с помощью ИИ."`.
+    *   **Action**: Let `aiEditedNote = "\\n\\nПримечание: Задача отредактирована с помощью ИИ."`.
+    *   **Condition**: If `currentDescription` does NOT contain `aiCreatedNote`:
+        *   `finalDescription = finalDescription + aiEditedNote`.
+    *   **Action**: Ask user: "Готовы обновить описание задачи [selectedJiraIssueKey] в Jira на следующее:\\n[finalDescription]\\n?"
+    *   **Condition**: If user agrees:
+        *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`).
+        *   **Report**: "Описание задачи [selectedJiraIssueKey] обновлено в Jira."
+    *   **Condition**: If user disagrees:
+        *   **Report**: "Обновление описания отменено."
+
+### Step 5.1: Update tasks.md with Creative Phase Progress/Completion
 *   **Action**: After creative work (e.g., design document `creative-[selectedJiraIssueKey].md` is created/updated):
     *   **Action**: Propose `edit_file` for `tasks.md` to update `selectedTaskLine`. This might involve:
         *   Adding a note like "- Creative Design Complete" to the task description part of the string.

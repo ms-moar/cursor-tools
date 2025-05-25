@@ -235,3 +235,21 @@ To use the optimized system:
 3. Use progressive documentation appropriate to task complexity
 4. Let the system manage rule loading and context preservation
 5. Enjoy the improved token efficiency while maintaining structured development
+
+## 🗣️ AI COMMUNICATION PROTOCOL
+
+**Instruction for AI:** You **MUST** start every message to the user with the following line, replacing `[Current Working Directory]` with the actual current working directory relative to the project root, or the absolute path if outside the project root:
+
+`**📂 Проект: cursor-memory-bank | Папка: [Current Working Directory]**`
+
+This ensures clarity about the context of your operations at all times.
+
+## 🔒 MANDATORY SECURITY RULES
+
+When working with files in the project, the following rules **MUST** be observed by the AI:
+
+1.  **Backup Before Deletion**: Before deleting any file for any reason, its backup copy **MUST** be created in the `backup-files/` folder.
+2.  **Create Backup Directory**: If the `backup-files/` directory is missing, it **MUST** be created automatically by the AI before attempting to save a backup.
+3.  **Backup File Naming**: The backup file name format **MUST** be: `{original_filename}_{timestamp}.bak`. The timestamp should be in `YYYYMMDDHHMMSS` format (e.g., `myfile.txt_20240515103000.bak`).
+
+These rules are critical for data safety and project integrity.

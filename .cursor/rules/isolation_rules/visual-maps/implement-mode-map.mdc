@@ -340,12 +340,32 @@ When the build is complete, notify user with:
 *   **Report**: "Git branch '[featureBranchName]' proposed/created from '[baseBranch]'."
 
 ### Step 5: Execute Implementation Steps
-*   **Action**: Read relevant planning/creative documents if they exist (e.g., `plan-[selectedJiraIssueKey].md`, `creative-[selectedJiraIssueKey].md`).
-*   **Action**: Follow the plan, guide user through code changes, file creation/edits, tests. Use `edit_file`, `run_terminal_cmd` as needed.
-*   **Interaction**: AI assists with code, user confirms changes.
-*   **Report**: Inform user on progress.
+*   **Instruction (Prompt for LLM)**: "You are in IMPLEMENT mode for task '[selectedJiraIssueKey] - [taskTitle]' (Project Context: '[selectedContextName]', Jira Project: '[selectedJiraProjectKey]'). The current Git branch is '[currentGitBranch]' (based from '[baseBranch]'). Review linked planning/creative documents: '[planDocPath]', '[creativeDocPath]'. Assist with code generation, debugging, and implementation based on these details. Adhere to coding standards from 'coding_standards.md' and project-specific guidelines from '[activeProjectContext.guidelines_file]'."
+*   **(Iterative AI-User Interaction for Implementation)**
+    *   User requests code, asks for debugging help, etc.
+    *   AI provides code, suggestions, explanations.
+    *   AI uses `run_terminal_cmd` for build, test, lint (after user confirmation).
+    *   AI uses `edit_file` for applying code changes.
+    *   Progress is made iteratively on `selectedJiraIssueKey`.
 
-### Step 5.1: Update `tasks.md` with Implementation Progress (Optional)
+### Step 5.0.1: (Optional) Update Jira Task Description (AI Assisted)
+*   **Condition**: If user requests to update the Jira task description for `selectedJiraIssueKey`:
+    *   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: description). Let `currentDescription` be the result.
+    *   **Action**: Ask user: "Какое новое описание вы хотите установить для задачи [selectedJiraIssueKey]?"
+    *   **Action**: Let `newDescriptionFromUser` be the user's input.
+    *   **Action**: Let `finalDescription = newDescriptionFromUser`.
+    *   **Action**: Let `aiCreatedNote = "Примечание: Задача создана с помощью ИИ."`.
+    *   **Action**: Let `aiEditedNote = "\\n\\nПримечание: Задача отредактирована с помощью ИИ."`.
+    *   **Condition**: If `currentDescription` does NOT contain `aiCreatedNote`:
+        *   `finalDescription = finalDescription + aiEditedNote`.
+    *   **Action**: Ask user: "Готовы обновить описание задачи [selectedJiraIssueKey] в Jira на следующее:\\n[finalDescription]\\n?"
+    *   **Condition**: If user agrees:
+        *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`).
+        *   **Report**: "Описание задачи [selectedJiraIssueKey] обновлено в Jira."
+    *   **Condition**: If user disagrees:
+        *   **Report**: "Обновление описания отменено."
+
+### Step 5.1: Update tasks.md with Implementation Progress
 *   **Action**: After significant sub-steps of implementation, AI can propose updating the description part of `selectedTaskLine` in `tasks.md` to note progress (e.g., appending "- API endpoint created"). This is optional and user-driven.
 
 ### Step 6: Propose Git Commit/Merge & DevOps Checks (using task's context)
