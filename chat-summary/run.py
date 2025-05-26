@@ -20,7 +20,7 @@ class AutoChatSummaryProcessor:
         self.index_file = self.base_dir / "chat-index.md"
         self.prompt_file = self.base_dir / "summary-prompt.md"
         self.config_file = self.base_dir / "config.json"
-        self.integration_config_file = self.base_dir.parent / "integration_config.json"
+        self.integration_config_file = self.base_dir.parent / "integration_config.md"
         
         # Создаем папку chat-summary если её нет
         self.chats_dir.mkdir(parents=True, exist_ok=True)
@@ -29,7 +29,7 @@ class AutoChatSummaryProcessor:
         self.config = self.load_config()
     
     def load_integration_config(self):
-        """Загружает конфигурацию из integration_config.json"""
+        """Загружает конфигурацию из integration_config.md"""
         if not self.integration_config_file.exists():
             return None
         
@@ -57,7 +57,7 @@ class AutoChatSummaryProcessor:
             
             return None
         except Exception as e:
-            print(f"Ошибка чтения integration_config.json: {e}")
+            print(f"Ошибка чтения integration_config.md: {e}")
             return None
     
     def load_config(self):
@@ -70,10 +70,10 @@ class AutoChatSummaryProcessor:
             "api_base": "https://api.deepseek.com"
         }
         
-        # Сначала пытаемся загрузить из integration_config.json
+        # Сначала пытаемся загрузить из integration_config.md
         integration_config = self.load_integration_config()
         if integration_config:
-            print("✓ Загружена конфигурация DeepSeek из integration_config.json")
+            print("✓ Загружена конфигурация DeepSeek из integration_config.md")
             config = {
                 "deepseek_api_key": integration_config.get("deepseek_api_key", ""),
                 "model": integration_config.get("deepseek_model", "deepseek-chat"),
@@ -83,7 +83,7 @@ class AutoChatSummaryProcessor:
             }
             return config
         
-        # Если не найдено в integration_config.json, используем config.json
+        # Если не найдено в integration_config.md, используем config.json
         if self.config_file.exists():
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
@@ -139,7 +139,7 @@ class AutoChatSummaryProcessor:
         
         if not api_key:
             print("API ключ DeepSeek не настроен")
-            print("Настройте ключ в integration_config.json или config.json")
+            print("Настройте ключ в integration_config.md или config.json")
             return None
         
         # Обрезаем контент если он слишком длинный (DeepSeek поддерживает больше токенов)
@@ -419,7 +419,7 @@ class AutoChatSummaryProcessor:
         if not self.config.get("deepseek_api_key"):
             print("⚠️  API ключ DeepSeek не настроен!")
             print("Настройте ключ одним из способов:")
-            print("1. Добавьте в integration_config.json в секцию 'Ваши контексты':")
+            print("1. Добавьте в integration_config.md в секцию 'Ваши контексты':")
             print("   deepseek_api_key: 'ваш_ключ'")
             print("2. Или отредактируйте файл config.json")
             print("Получить ключ можно на: https://platform.deepseek.com/")

@@ -1,7 +1,7 @@
 # Tasks Across All Projects
 
 > **IMPORTANT:** Each task line must follow the format:
-> `- [Status (x for done)] **[JIRA_PROJECT_KEY:JIRA_ISSUE_ID]** [Module Prefix (optional)] Task Title - *Brief description (optional)* - **SP: Y** (Context: [Context Name from integration_config.json])`
+> `- [Status (x for done)] **[JIRA_PROJECT_KEY:JIRA_ISSUE_ID]** [Module Prefix (optional)] Task Title - *Brief description (optional)* - **SP: Y** (Context: [Context Name from integration_config.md])`
 > This file is the local source of truth for the task list and should be kept in sync with Jira.
 
 ## Current & Upcoming Tasks

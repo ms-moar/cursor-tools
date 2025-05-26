@@ -72,7 +72,7 @@ graph TD
 ## DETAILED STEPS (Key Updates for Context and `tasks.md`)
 
 ### Step 0.1: Read Global Configs
-*   **Action**: Read `integration_config.json` for `Project Contexts`, global settings, and `tasks.md` format info.
+*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, and `tasks.md` format info.
 
 ### Step 0.2: Select Active Project Context
 *   **Action**: (As defined in previous modes - user selects `activeProjectContext`).
@@ -120,7 +120,7 @@ graph TD
 *   **Generate Report**: Mention `activeProjectContext.context_name` and `qaTargetJiraIssueKey` (if any).
 *   **If Successful**: ✅
     *   **Update Jira Status (Only if `qaTargetJiraIssueKey` is set)**:
-        *   **Action**: Let `qaPassStatusKey = "QA_PASS"` (or a similar key defined in `integration_config.json` for QA success).
+        *   **Action**: Let `qaPassStatusKey = "QA_PASS"` (or a similar key defined in `integration_config.md` for QA success).
         *   **Action**: Let `jiraTargetStatus = selectedJiraStatusMapping[qaPassStatusKey]` (e.g., the actual Jira status like "Ready for UAT" or "Done").
         *   **Condition**: If `jiraTargetStatus` is found:
             *   **Action**: Call `mcp_mcp-atlassian_jira_transition_issue` (or `update_issue`) for `qaTargetJiraIssueKey` to `jiraTargetStatus`.
@@ -619,7 +619,7 @@ This enhanced QA mode serves as a "quality guardian" throughout the development 
 ### Step 5: Report Results and Prepare for Transition
 
 - **Configuration Reading**:
-    - **Action**: Read the `integration_config.json` file to get Jira configuration.
+    - **Action**: Read the `integration_config.md` file to get Jira configuration.
     - **Data**: Extract `Project Key` and Jira status for VAN QA phase (e.g., `In Progress`).
 
 - **Generate Report**: Create either a success or failure report based on the validation outcome.

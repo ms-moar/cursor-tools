@@ -9,7 +9,7 @@ NO OPERATION CAN PROCEED WITHOUT MEMORY BANK STRUCTURE
 
 ```mermaid
 graph TD
-    Start["🚀 START VAN MODE"] --> ReadGlobalConfig["Step 0.1: Read Global Configs<br>(integration_config.json)"]
+    Start["🚀 START VAN MODE"] --> ReadGlobalConfig["Step 0.1: Read Global Configs<br>(integration_config.md)"]
     ReadGlobalConfig --> SelectActiveContext["Step 0.2: Select Active Project Context"]
     SelectActiveContext --> AutoSyncTasksMD["Step 1: Auto-Sync tasks.md with Jira<br>(all contexts)"]
     AutoSyncTasksMD --> InitialTaskID["Step 2: Initial Task Identification<br>(Jira Issue Key for active context)"]
@@ -133,7 +133,7 @@ graph TD
 ## 📋 DETAILED STEPS
 
 ### Step 0.1: Read Global Configs
-*   **Action**: Read `integration_config.json` for `Project Contexts`, global settings, and `tasks.md` format.
+*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, and `tasks.md` format.
 *   **Data**: Extract available project contexts and their configurations.
 
 ### Step 0.2: Select Active Project Context
@@ -199,7 +199,7 @@ graph TD
 
 ```
 ✓ VAN MODE VERIFICATION
-- Global configs read from integration_config.json? [YES/NO]
+- Global configs read from integration_config.md? [YES/NO]
 - Active project context selected? [YES/NO]
 - tasks.md synced with Jira (all contexts)? [YES/NO]
 - Initial task identified for active context? [YES/NO]

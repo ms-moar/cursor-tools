@@ -18,7 +18,7 @@ alwaysApply: false
 
 ```mermaid
 graph TD
-    Start["START ARCHIVE MODE"] --> ReadGlobalConfig["Step 0.1: Read Global Configs<br>(integration_config.json)"]
+    Start["START ARCHIVE MODE"] --> ReadGlobalConfig["Step 0.1: Read Global Configs<br>(integration_config.md)"]
     ReadGlobalConfig --> SelectActiveContext["Step 0.2: Select Active Project Context"]
     SelectActiveContext --> IdentifyTaskToArchive["Step 0.3: Identify Task to Archive<br>(from tasks.md or Jira ID for active context)"]
     IdentifyTaskToArchive --> ReadRelevantDocs["Read tasks.md, reflection.md for selected task<br>and progress.md"]

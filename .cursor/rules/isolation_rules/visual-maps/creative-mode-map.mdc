@@ -162,7 +162,7 @@ Use these visual markers for creative phases:
 ## 🎨 DETAILED CREATIVE WORKFLOW STEPS
 
 ### Step 0.1: Read Global Configs
-*   **Action**: Read `integration_config.json` for `Project Contexts`, global settings, `tasks.md` format.
+*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, `tasks.md` format.
 
 ### Step 0.2: Select Active Project Context
 *   **Action**: (As defined previously - user selects `activeProjectContext`).
