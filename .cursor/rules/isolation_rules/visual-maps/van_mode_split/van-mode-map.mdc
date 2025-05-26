@@ -176,8 +176,12 @@ graph TD
         ```
     *   **Action**: Wait for user response and handle clarifications.
     *   **Condition**: If user requests changes:
-        *   Update task description with clarifications.
-        *   Add `edited-by-ai` label and "Примечание: Задача отредактирована с помощью ИИ." note.
+        *   Let `jiraComponent = activeProjectContext.jira_component`.
+        *   Let `shouldSetComponent = (jiraComponent != "NO_NAME")`.
+        *   **Condition**: If `shouldSetComponent`:
+            *   Update task description with clarifications, add `edited-by-ai` label, "Примечание: Задача отредактирована с помощью ИИ." note, and set component to `jiraComponent`.
+        *   **Condition**: Else:
+            *   Update task description with clarifications and add `edited-by-ai` label and "Примечание: Задача отредактирована с помощью ИИ." note.
     *   **Action**: Estimate and set Story Points based on agreed complexity.
     *   **Action**: Add appropriate AI labels if not already present.
 *   **Report**: "AI метки для задачи [selectedJiraIssueKey] проверены и валидированы."

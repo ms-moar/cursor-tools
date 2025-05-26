@@ -1,40 +1,17 @@
 # Integration Configuration for Memory Bank System
 
-Централизованные настройки интеграций для системы Memory Bank.
-
 ## Project Contexts
 
-Определите контексты ваших проектов. Каждый контекст может иметь свои ключи и URL для различных сервисов.
+**Для ИИ:** При активации режима, который взаимодействует с Jira, Confluence или GitLab, сначала спросите пользователя, какой `activeProjectContext` использовать.
 
-**Для ИИ:** При активации режима, который взаимодействует с Jira, Confluence, GitLab или Vercel, сначала спросите пользователя, какой `activeProjectContext` использовать.
-
-**Пример структуры:**
-
-```yaml
-- context_name: "My Project"
-  description: "Описание проекта"
-  jira_project_key: "PROJ"
-  jira_default_issue_type: "Story"
-  jira_status_mapping:
-    PLAN: "Backlog"
-    IMPLEMENT_START: "In Progress"
-    IMPLEMENT_COMPLETE: "Done"
-    ARCHIVE: "Closed"
-  confluence_space_key: "PROJDOCS"
-  gitlab_project_id: "your_gitlab_project_id"
-  gitlab_default_branch: "main"
-  vercel_project_id: "your_vercel_project_id"
-  deepseek_api_key: "your_deepseek_api_key"
-  deepseek_model: "deepseek-chat"
-```
-
-**Ваши контексты:**
+## Контекст 1
 
 ```yaml
 - context_name: "Cursor Memory Bank"
   description: "Система управления памятью для Cursor IDE"
   jira_project_key: "CMB"
   jira_default_issue_type: "Story"
+  jira_component: "NO_NAME"
   jira_status_mapping:
     PLAN: "Backlog"
     IMPLEMENT_START: "In Progress"
@@ -43,9 +20,29 @@
   confluence_space_key: "CMBDOCS"
   gitlab_project_id: "cursor_memory_bank"
   gitlab_default_branch: "main"
-  vercel_project_id: "cursor_memory_bank"
   deepseek_api_key: "ваш_реальный_ключ_здесь"
-  deepseek_model: "deepseek-chat"
+  deepseek_model: "deepseek-reasoner"
+  jira_login: "ВАШ_JIRA_ЛОГИН"
+```
+
+## Контекст 2
+
+```yaml
+- context_name: "Второй проект"
+  description: "Описание второго проекта"
+  jira_project_key: "PROJ2"
+  jira_default_issue_type: "Story"
+  jira_component: "NO_NAME"
+  jira_status_mapping:
+    PLAN: "Backlog"
+    IMPLEMENT_START: "In Progress"
+    IMPLEMENT_COMPLETE: "Done"
+    ARCHIVE: "Closed"
+  confluence_space_key: "PROJ2DOCS"
+  gitlab_project_id: "second_project"
+  gitlab_default_branch: "main"
+  deepseek_api_key: "ваш_второй_ключ_здесь"
+  deepseek_model: "deepseek-reasoner"
   jira_login: "ВАШ_JIRA_ЛОГИН"
 ```
 
@@ -84,33 +81,6 @@
 3. ИИ будет автоматически управлять `tasks.md`
 4. При работе с интеграциями ИИ спросит активный контекст проекта
 
-## AI Task Management Integration
-
-### Обзор изменений
-Интегрирована логика управления AI-метками и валидации задач прямо в существующие правила Cursor.
-
-### Измененные файлы
-
-1. **`main-optimized.mdc`**
-   - Добавлен раздел "AI TRANSPARENCY AND VALIDATION"
-   - Краткое описание интегрированной функциональности
-
-2. **`van-mode-map.mdc`**
-   - Step 2.1: AI Task Validation
-   - Полная логика валидации задач без AI-меток
-
-3. **`creative-mode-map.mdc`**
-   - Step 4.1: AI Task Validation
-   - Специализированная валидация для дизайн-задач
-
-4. **`implement-mode-map.mdc`**
-   - Step 4.1: AI Task Validation
-   - Специализированная валидация для технических задач
-
-5. **`plan-mode-map.mdc`**
-   - Обновлены вызовы создания задач с метками `created-by-ai`
-   - Синхронизация меток и текстовых примечаний
-
 ### Логика работы
 
 #### Автоматические метки
@@ -118,6 +88,7 @@
 - При редактировании AI: метка `edited-by-ai` + текст "Примечание: Задача отредактирована с помощью ИИ."
 
 #### Валидация задач
+
 Если задача не имеет AI-меток:
 1. Анализ содержимого задачи
 2. Представление интерпретации пользователю (специализированной по режиму)
@@ -126,14 +97,45 @@
 5. Оценка Story Points
 6. Добавление соответствующих меток
 
-#### Специализация по режимам
-- **VAN**: Общая валидация с определением сложности
-- **CREATIVE**: Фокус на дизайн-требованиях
-- **IMPLEMENT**: Фокус на технических требованиях
+## Automatic Component Assignment Integration
 
-### Преимущества интеграции
-- Нет новых файлов правил
-- Логика встроена в существующие процессы
-- Контекстно-зависимая валидация
-- Полная прозрачность работы AI
-- Автоматическая синхронизация меток и описаний 
+### Обзор изменений
+Добавлена автоматическая установка компонента Jira для всех операций с задачами.
+
+### Логика работы
+
+#### Источник компонента
+- Читается из `activeProjectContext.jira_component` в `integration_config.md`
+- Если значение НЕ равно "NO_NAME", компонент автоматически устанавливается
+
+#### Применение
+- **Создание задач**: Все вызовы `mcp_mcp-atlassian_jira_create_issue` включают параметр `components`
+- **Обновление задач**: Все вызовы `mcp_mcp-atlassian_jira_update_issue` включают параметр `components`
+- **Область действия**: Эпики, задачи, все типы Jira issues
+
+#### Измененные файлы
+1. **`main-optimized.mdc`** - добавлен раздел "AUTOMATIC COMPONENT ASSIGNMENT"
+2. **`plan-mode-map.mdc`** - логика компонента в создании эпиков и задач
+3. **`implement-mode-map.mdc`** - логика компонента в обновлении задач
+4. **`creative-mode-map.mdc`** - логика компонента в обновлении задач
+5. **`van-mode-map.mdc`** - логика компонента в валидации задач
+
+#### Условная логика
+```
+Let jiraComponent = activeProjectContext.jira_component
+Let shouldSetComponent = (jiraComponent != "NO_NAME")
+
+If shouldSetComponent:
+    Call API with components [jiraComponent]
+Else:
+    Call API without components parameter
+```
+
+### Преимущества
+- Автоматическая категоризация задач по компонентам
+- Единообразная настройка через конфигурацию
+- Гибкость: можно отключить установкой "NO_NAME"
+- Применяется ко всем операциям с Jira без исключений
+
+### Настройка
+Для активации установки компонента измените `jira_component` в нужном контексте проекта с "NO_NAME" на название реального компонента в вашем Jira проекте.

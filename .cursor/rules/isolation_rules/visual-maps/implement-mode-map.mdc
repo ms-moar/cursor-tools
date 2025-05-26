@@ -309,7 +309,13 @@ When the build is complete, notify user with:
 *   **Action**: Let `implementStatus = selectedJiraStatusMapping.IMPLEMENT` (e.g., "In Progress") for the `activeProjectContext`.
 *   **Condition**: If current Jira status is `implementStatus` AND assignee is NOT `currentUser()`: STOP (Conflict).
 *   **Condition**: If current Jira status is NOT `implementStatus`: Propose `mcp_mcp-atlassian_jira_transition_issue` to `implementStatus`.
-*   **Condition**: If current Jira assignee is NOT `currentUser()`: Propose `mcp_mcp-atlassian_jira_update_issue` to assign to `currentUser()`.
+*   **Condition**: If current Jira assignee is NOT `currentUser()`: 
+    *   Let `jiraComponent = activeProjectContext.jira_component`.
+    *   Let `shouldSetComponent = (jiraComponent != "NO_NAME")`.
+    *   **Condition**: If `shouldSetComponent`:
+        *   Propose `mcp_mcp-atlassian_jira_update_issue` to assign to `currentUser()` and set component to `jiraComponent`.
+    *   **Condition**: Else:
+        *   Propose `mcp_mcp-atlassian_jira_update_issue` to assign to `currentUser()`.
 *   **Action**: Wait for approval. If changes made, set `jiraStatusChanged = true`.
 
 ### Step 3.1: Update `tasks.md` with Jira Status/Assignee
@@ -391,7 +397,12 @@ When the build is complete, notify user with:
 *   **Action**: Let `updatedLabels = currentLabels + [aiEditedLabel]` (if not already present).
     *   **Action**: Ask user: "Готовы обновить описание задачи [selectedJiraIssueKey] в Jira на следующее:\\n[finalDescription]\\n?"
     *   **Condition**: If user agrees:
-        *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`).
+        *   Let `jiraComponent = activeProjectContext.jira_component`.
+        *   Let `shouldSetComponent = (jiraComponent != "NO_NAME")`.
+        *   **Condition**: If `shouldSetComponent`:
+            *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`, components `[jiraComponent]`).
+        *   **Condition**: Else:
+            *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`).
         *   **Report**: "Описание и метки задачи [selectedJiraIssueKey] обновлены в Jira."
     *   **Condition**: If user disagrees:
         *   **Report**: "Обновление описания отменено."

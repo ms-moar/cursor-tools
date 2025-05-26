@@ -191,6 +191,14 @@ All modes now include integrated AI task validation:
 - **Context-Aware**: Each mode presents specialized validation (design, implementation, etc.)
 - **Story Points**: Estimation included in validation process
 
+## 🏗️ AUTOMATIC COMPONENT ASSIGNMENT
+
+All Jira operations automatically include component assignment:
+- **Component Source**: Read from `activeProjectContext.jira_component` in `integration_config.md`
+- **Auto-Assignment**: If component is NOT "NO_NAME", automatically set component in all Jira create/update operations
+- **Scope**: Applies to task creation, task updates, Epic creation, and all Jira modifications
+- **Validation**: Component existence verified before assignment
+
 ## 📑 OPTIMIZED TEMPLATES BY LEVEL
 
 ### Level 1: Quick Fix Template

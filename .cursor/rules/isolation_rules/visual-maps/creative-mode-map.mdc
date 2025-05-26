@@ -269,7 +269,12 @@ Use these visual markers for creative phases:
 *   **Action**: Let `updatedLabels = currentLabels + [aiEditedLabel]` (if not already present).
     *   **Action**: Ask user: "Готовы обновить описание задачи [selectedJiraIssueKey] в Jira на следующее:\\n[finalDescription]\\n?"
     *   **Condition**: If user agrees:
-        *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`).
+        *   Let `jiraComponent = activeProjectContext.jira_component`.
+        *   Let `shouldSetComponent = (jiraComponent != "NO_NAME")`.
+        *   **Condition**: If `shouldSetComponent`:
+            *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`, components `[jiraComponent]`).
+        *   **Condition**: Else:
+            *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`).
         *   **Report**: "Описание и метки задачи [selectedJiraIssueKey] обновлены в Jira."
     *   **Condition**: If user disagrees:
         *   **Report**: "Обновление описания отменено."
