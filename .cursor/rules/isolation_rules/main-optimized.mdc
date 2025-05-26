@@ -183,6 +183,14 @@ Documentation requirements scale based on complexity level:
 | Testing Requirements | Basic | Standard | Comprehensive | Rigorous |
 | Documentation | Minimal | Standard | Detailed | Extensive |
 
+## 🤖 AI TRANSPARENCY AND VALIDATION
+
+All modes now include integrated AI task validation:
+- **AI Labels**: `created-by-ai`, `edited-by-ai` automatically applied
+- **Task Validation**: Automatic interpretation and user confirmation for unlabeled tasks
+- **Context-Aware**: Each mode presents specialized validation (design, implementation, etc.)
+- **Story Points**: Estimation included in validation process
+
 ## 📑 OPTIMIZED TEMPLATES BY LEVEL
 
 ### Level 1: Quick Fix Template

@@ -217,6 +217,35 @@ Use these visual markers for creative phases:
     *   **Action**: Wait for approval.
 *   **Report**: "Git branch '[featureBranchName]' proposed/created from '[baseBranch]'."
 
+### Step 4.1: AI Task Validation
+*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: description, labels).
+*   **Action**: Let `currentLabels = result.labels`, `currentDescription = result.description`.
+*   **Action**: Let `hasAILabels = ("created-by-ai" in currentLabels OR "edited-by-ai" in currentLabels)`.
+*   **Action**: Let `hasAIText = ("создана с помощью ИИ" in currentDescription OR "отредактирована с помощью ИИ" in currentDescription)`.
+*   **Condition**: If NOT `hasAILabels` AND NOT `hasAIText`:
+    *   **Action**: Analyze task for creative design requirements.
+    *   **Action**: Present interpretation focusing on design aspects:
+        ```
+        🤖 СОГЛАСОВАНИЕ ЗАДАЧИ [selectedJiraIssueKey] (CREATIVE MODE)
+        
+        📋 МОЯ ИНТЕРПРЕТАЦИЯ:
+        Суть задачи: [design-focused understanding]
+        Дизайн-требования: [UI/UX, Architecture, Algorithm needs]
+        Ожидаемые решения: [design deliverables]
+        Сложность дизайна: [Level 1-4 with design reasoning]
+        
+        ✅ Подтверждаете понимание дизайн-задач?
+        📝 Нужны уточнения в требованиях к дизайну?
+        🎯 Согласны с оценкой сложности дизайна?
+        ```
+    *   **Action**: Wait for user confirmation and handle design clarifications.
+    *   **Condition**: If user requests changes:
+        *   Update task description with design clarifications.
+        *   Add `edited-by-ai` label and "Примечание: Задача отредактирована с помощью ИИ." note.
+    *   **Action**: Estimate Story Points considering design complexity.
+    *   **Action**: Add appropriate AI labels if not already present.
+*   **Report**: "AI метки для задачи [selectedJiraIssueKey] проверены. Готов к творческой фазе."
+
 ### Step 5: Execute Creative Design Process (for selected Jira task)
 *   **Instruction (Prompt for LLM)**: "You are in CREATIVE mode for task '[selectedJiraIssueKey] - [taskTitle]' (Project Context: '[selectedContextName]', Jira Project: '[selectedJiraProjectKey]'). Current Git branch: '[currentGitBranch]'. Review linked planning documents. Guide through UI/UX, Architecture, Data Model, or Algorithm design. Document options, pros/cons, decisions, and implementation notes in 'creative-docs/creative-[selectedJiraIssueKey]-[TYPE].md'. Use Creative Phase Markers."
 *   **(Iterative AI-User Interaction for Design)**
@@ -234,12 +263,14 @@ Use these visual markers for creative phases:
     *   **Action**: Let `finalDescription = newDescriptionFromUser`.
     *   **Action**: Let `aiCreatedNote = "Примечание: Задача создана с помощью ИИ."`.
     *   **Action**: Let `aiEditedNote = "\\n\\nПримечание: Задача отредактирована с помощью ИИ."`.
-    *   **Condition**: If `currentDescription` does NOT contain `aiCreatedNote`:
-        *   `finalDescription = finalDescription + aiEditedNote`.
+*   **Action**: Let `aiEditedLabel = "edited-by-ai"`.
+*   **Condition**: If `currentDescription` does NOT contain `aiCreatedNote`:
+    *   `finalDescription = finalDescription + aiEditedNote`.
+*   **Action**: Let `updatedLabels = currentLabels + [aiEditedLabel]` (if not already present).
     *   **Action**: Ask user: "Готовы обновить описание задачи [selectedJiraIssueKey] в Jira на следующее:\\n[finalDescription]\\n?"
     *   **Condition**: If user agrees:
-        *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`).
-        *   **Report**: "Описание задачи [selectedJiraIssueKey] обновлено в Jira."
+        *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`).
+        *   **Report**: "Описание и метки задачи [selectedJiraIssueKey] обновлены в Jira."
     *   **Condition**: If user disagrees:
         *   **Report**: "Обновление описания отменено."
 

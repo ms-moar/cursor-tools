@@ -90,24 +90,28 @@ graph TD
     *   Calculate `totalEpicSp` (parsing X from `SP_VALUE=X`). Create `taskListStringForEpicDesc` (listing tasks with their `SP_VALUE=X`) and `epicDescription` (including `SP_VALUE=[totalEpicSp]` and `Project Context: [selectedContextName]`).
     *   Let `assigneeLogin = activeProjectContext.Jira_login`.
     *   Let `aiNote = "\\n\\nПримечание: Задача создана с помощью ИИ."`.
+    *   Let `aiCreatedLabel = "created-by-ai"`.
     *   **Condition**: If `totalEpicSp < 7`:
         *   Ask user about consolidating. If yes:
             *   Let `finalEpicDescription = epicDescription + aiNote`.
-            *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `finalEpicDescription`, assignee `assigneeLogin`).
+            *   Let `labels = [aiCreatedLabel]`.
+            *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `finalEpicDescription`, assignee `assigneeLogin`, labels `labels`).
             *   If successful, add `{jira_id: EPIC_KEY, title: epicName, sp_value: totalEpicSp, description: taskListStringForEpicDesc, is_epic_only: true}` to `createdOrUpdatedJiraIssues`.
         *   If user says no to consolidation, proceed as if `totalEpicSp >= 7`.
     *   **Condition**: Else (`totalEpicSp >= 7` or user disagreed with consolidation):
-        *   Ask user to create Epic. If yes:
-            *   Let `finalEpicDescription = "Total Story Points: SP_VALUE=[totalEpicSp]\\nProject Context: \'[selectedContextName]\'" + aiNote`.
-            *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `finalEpicDescription`, assignee `assigneeLogin`).
+                    *   Ask user to create Epic. If yes:
+                *   Let `finalEpicDescription = "Total Story Points: SP_VALUE=[totalEpicSp]\\nProject Context: \'[selectedContextName]\'" + aiNote`.
+                *   Let `labels = [aiCreatedLabel]`.
+                *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `finalEpicDescription`, assignee `assigneeLogin`, labels `labels`).
             *   If successful, let `parentEpicKey` be the new Jira key. Add `{jira_id: parentEpicKey, title: epicName, sp_value: totalEpicSp, description: "(Epic - tasks listed separately)", is_epic_only: false, sub_tasks: []}` to `createdOrUpdatedJiraIssues`.
             *   Report success.
             *   For each task (`taskName`, `taskSpValue` (e.g., "SP_VALUE=3"), `taskDescription`) under this Epic:
                 *   Confirm other Jira details (components, labels).
                 *   Let `parsedTaskSp = X` (from `taskSpValue`).
-                *   Let `jiraTaskDescription = "Story Points: SP_VALUE=[parsedTaskSp]\\nProject Context: \'[selectedContextName]\'\\n\\nOriginal Description:\\n" + taskDescription + aiNote`.
-                *   Ask user to create Jira issue. If yes:
-                    *   Call `mcp_mcp-atlassian_jira_create_issue` for Task (project `selectedJiraProjectKey`, summary `taskName`, type `selectedJiraDefaultIssueType`, description `jiraTaskDescription`, parent `parentEpicKey`, assignee `assigneeLogin`).
+                                    *   Let `jiraTaskDescription = "Story Points: SP_VALUE=[parsedTaskSp]\\nProject Context: \'[selectedContextName]\'\\n\\nOriginal Description:\\n" + taskDescription + aiNote`.
+                    *   Ask user to create Jira issue. If yes:
+                        *   Let `taskLabels = [aiCreatedLabel]`.
+                        *   Call `mcp_mcp-atlassian_jira_create_issue` for Task (project `selectedJiraProjectKey`, summary `taskName`, type `selectedJiraDefaultIssueType`, description `jiraTaskDescription`, parent `parentEpicKey`, assignee `assigneeLogin`, labels `taskLabels`).
                     *   If successful, add/append to `sub_tasks` of the parent Epic in `createdOrUpdatedJiraIssues`: `{jira_id: TASK_KEY, title: taskName, sp_value: parsedTaskSp, description: taskDescription}`.
                     *   Report success.
 *   **Report**: "Jira issue creation/update process completed for project context '[selectedContextName]'."

@@ -153,6 +153,35 @@ graph TD
 *   **Action**: Fetch task details from Jira for context.
 *   **Report**: "Working with task: [selectedJiraIssueKey] in context '[activeProjectContext.context_name]'."
 
+### Step 2.1: AI Task Validation
+*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: description, labels).
+*   **Action**: Let `currentLabels = result.labels`, `currentDescription = result.description`.
+*   **Action**: Let `hasAILabels = ("created-by-ai" in currentLabels OR "edited-by-ai" in currentLabels)`.
+*   **Action**: Let `hasAIText = ("создана с помощью ИИ" in currentDescription OR "отредактирована с помощью ИИ" in currentDescription)`.
+*   **Condition**: If NOT `hasAILabels` AND NOT `hasAIText`:
+    *   **Action**: Analyze task content (summary, description, context).
+    *   **Action**: Present interpretation to user:
+        ```
+        🤖 СОГЛАСОВАНИЕ ЗАДАЧИ [selectedJiraIssueKey]
+        
+        📋 МОЯ ИНТЕРПРЕТАЦИЯ:
+        Суть задачи: [brief understanding]
+        Контекст: [context and dependencies]
+        Ожидаемый результат: [expected deliverables]
+        Сложность: [Level 1-4 with reasoning]
+        
+        ✅ Подтверждаете интерпретацию?
+        📝 Нужны уточнения в описании?
+        🎯 Согласны с оценкой сложности?
+        ```
+    *   **Action**: Wait for user response and handle clarifications.
+    *   **Condition**: If user requests changes:
+        *   Update task description with clarifications.
+        *   Add `edited-by-ai` label and "Примечание: Задача отредактирована с помощью ИИ." note.
+    *   **Action**: Estimate and set Story Points based on agreed complexity.
+    *   **Action**: Add appropriate AI labels if not already present.
+*   **Report**: "AI метки для задачи [selectedJiraIssueKey] проверены и валидированы."
+
 ### Step 3: Architecture Document Check
 *   **Action**: Check if `/docs/architecture.md` exists for the project.
 *   **Action**: If missing, note for creation during CREATIVE phase.
