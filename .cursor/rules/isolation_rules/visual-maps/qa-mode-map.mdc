@@ -3,19 +3,15 @@ description: QA Mode
 globs: qa-mode-map.mdc
 alwaysApply: false
 ---
-# QA MODE MAP (Multi-Context)
 
-> **TL;DR:** This enhanced QA mode provides comprehensive validation for a task selected from `tasks.md` or for a general phase within a chosen Project Context. It validates task integrity in Jira, local documentation, and performs technical/DevOps checks relevant to the active context.
+
+> **TL;DR:** This enhanced QA mode provides comprehensive validation at any stage of development. It automatically detects the current phase, validates Memory Bank consistency, verifies task tracking, and performs phase-specific technical validation to ensure project quality throughout the development lifecycle.
 
 ## 🔍 ENHANCED QA MODE PROCESS FLOW
 
 ```mermaid
 graph TD
-    Start["🚀 START QA MODE"] --> ReadGlobalConfig["Step 0.1: Read Global Configs"]
-    ReadGlobalConfig --> SelectActiveContext["Step 0.2: Select Active Project Context"]
-    SelectActiveContext --> IdentifyTarget["Step 0.3: Identify QA Target (Specific Jira Task or General Phase)"]
-    
-    IdentifyTarget --> DetectPhase["🧭 PHASE DETECTION (for [activeProjectContext.context_name] / [qaTargetJiraIssueKey])"]
+    Start["🚀 START QA MODE"] --> DetectPhase["🧭 PHASE DETECTION<br>Determine current project phase"]
     
     %% Phase detection decision path
     DetectPhase --> PhaseDetermination{"Current Phase?"}
@@ -24,116 +20,43 @@ graph TD
     PhaseDetermination -->|"CREATIVE"| CREATIVEChecks["CREATIVE Phase Validation"] 
     PhaseDetermination -->|"IMPLEMENT"| IMPLEMENTChecks["IMPLEMENT Phase Validation"]
     
-    %% Universal checks adapted for context and tasks.md
-    IdentifyTarget --> UniversalChecks["🔍 UNIVERSAL VALIDATION (for [activeProjectContext.context_name])"]
-    UniversalChecks --> TasksMDJiraSync["1️⃣ tasks.md & JIRA SYNC/INTEGRITY (for [activeProjectContext])"]
-    TasksMDJiraSync --> ReferenceCheck["2️⃣ REFERENCE VALIDATION (docs to Jira tasks in context)"]
+    %% Universal checks that apply to all phases
+    DetectPhase --> UniversalChecks["🔍 UNIVERSAL VALIDATION"]
+    UniversalChecks --> MemoryBankCheck["1️⃣ MEMORY BANK VERIFICATION<br>Check consistency & updates"]
+    MemoryBankCheck --> TaskTrackingCheck["2️⃣ TASK TRACKING VERIFICATION<br>Validate tasks.md as source of truth"]
+    TaskTrackingCheck --> ReferenceCheck["3️⃣ REFERENCE VALIDATION<br>Verify cross-references between docs"]
     
     %% Phase-specific validations feed into comprehensive report
     VANChecks & PLANChecks & CREATIVEChecks & IMPLEMENTChecks --> PhaseSpecificResults["Phase-Specific Results"]
     ReferenceCheck & PhaseSpecificResults --> ValidationResults{"✅ All Checks<br>Passed?"}
     
     %% Results Processing
-    ValidationResults -->|"Yes"| SuccessReport["📝 GENERATE SUCCESS REPORT"]
-
-    %% JIRA INTEGRATION START (using selected context)
-    SuccessReport --> UpdateJiraStatus["📚 Update Jira Status for [qaTargetJiraIssueKey] (if any) in [selectedJiraProjectKey]"]
-    UpdateJiraStatus --> SuggestNextMode["🚦 Suggest Next Mode for [selectedJiraProjectKey]"]
-    %% JIRA INTEGRATION END
-
+    ValidationResults -->|"Yes"| SuccessReport["📝 GENERATE SUCCESS REPORT<br>All validations passed"]
     ValidationResults -->|"No"| FailureReport["⚠️ GENERATE FAILURE REPORT<br>With specific fix instructions"]
     
     %% Success Path
-    SuggestNextMode --> ContinueProcess["🚦 CONTINUE: Phase processes<br>can proceed"]
+    SuccessReport --> UpdateMB["📚 Update Memory Bank<br>Record successful validation"]
+    UpdateMB --> ContinueProcess["🚦 CONTINUE: Phase processes<br>can proceed"]
     
     %% Failure Path
-    FailureReport --> FixIssues["🔧 Fix Technical Issues"]
-    FixIssues --> ReValidate["🔄 Re-validate"]
-    ReValidate --> ValidationResults
+    FailureReport --> IdentifyFixes["🔧 IDENTIFY REQUIRED FIXES"]
+    IdentifyFixes --> ApplyFixes["🛠️ APPLY FIXES"]
+    ApplyFixes --> Revalidate["🔄 Re-run validation"]
+    Revalidate --> ValidationResults
     
     %% Style nodes for clarity
     style Start fill:#4da6ff,stroke:#0066cc,color:white
-    style ReadGlobalConfig fill:#f6ad55,stroke:#c27022,color:white
-    style SelectActiveContext fill:#f6ad55,stroke:#c27022,color:white
     style DetectPhase fill:#f6ad55,stroke:#c27022,color:white
     style UniversalChecks fill:#f6546a,stroke:#c30052,color:white
-    style TasksMDJiraSync fill:#10b981,stroke:#059669,color:white
+    style MemoryBankCheck fill:#10b981,stroke:#059669,color:white
+    style TaskTrackingCheck fill:#10b981,stroke:#059669,color:white
     style ReferenceCheck fill:#10b981,stroke:#059669,color:white
     style ValidationResults fill:#f6546a,stroke:#c30052,color:white
     style SuccessReport fill:#10b981,stroke:#059669,color:white
     style FailureReport fill:#f6ad55,stroke:#c27022,color:white
     style ContinueProcess fill:#10b981,stroke:#059669,color:white,stroke-width:2px
-    style FixIssues fill:#ff5555,stroke:#dd3333,color:white
-    %% JIRA Node Styles
-    style UpdateJiraStatus fill:#5e72e4,stroke:#324cdd,color:white
-    style SuggestNextMode fill:#10b981,stroke:#059669,color:white
+    style IdentifyFixes fill:#f6ad55,stroke:#c27022,color:white
 ```
-
-## DETAILED STEPS (Key Updates for Context and `tasks.md`)
-
-### Step 0.1: Read Global Configs
-*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, and `tasks.md` format info.
-
-### Step 0.2: Select Active Project Context
-*   **Action**: (As defined in previous modes - user selects `activeProjectContext`).
-*   **Action**: Store `selectedJiraProjectKey`, `selectedJiraStatusMapping`, `selectedContextName`, GitLab/Vercel keys from `activeProjectContext`.
-
-### Step 0.3: Identify QA Target (Specific Jira Task or General Phase for active context)
-*   **Action**: Ask user: "Are we performing QA for a specific Jira Task in project '[selectedJiraProjectKey]' (context: '[selectedContextName]')? If yes, please provide the Jira Issue Key from `tasks.md` or Jira. Otherwise, QA will be general for the current phase of this context."
-*   **Action**: If user provides Jira Key (e.g., `[selectedJiraProjectKey]-NNN`):
-    *   Store as `qaTargetJiraIssueKey`.
-    *   Attempt to find and store `qaSelectedTaskLine` from `tasks.md` matching this key and context.
-    *   Fetch its details from Jira for context.
-*   **Action**: Else (general QA for phase):
-    *   Set `qaTargetJiraIssueKey = null`.
-    *   `qaSelectedTaskLine = null`.
-
-### Step 1: Detect Current Phase and Prepare (within selected context / for target task)
-*   **Action**: If `qaTargetJiraIssueKey` is set, use its Jira status (and `selectedJiraStatusMapping`) to infer the current phase of this specific task.
-*   **Action**: Else (general QA), analyze `activeContext.md` (if used and context-specific) or query Jira for recently updated tasks in `selectedJiraProjectKey` to infer current project phase for `selectedContextName`.
-*   **Action**: Load appropriate validation checklist based on detected phase and `activeProjectContext`.
-
-### Step 2: Perform Universal Checks (adapted for selected context and `tasks.md`)
-*   **`tasks.md` & Jira Sync/Integrity Check (for `activeProjectContext`):**
-    *   **Action**: Read `tasks.md`. For each line matching `(Context: [selectedContextName])`:
-        *   Parse `JIRA_PROJECT_KEY_FROM_TASK`, `JIRA_ISSUE_ID_FROM_TASK`, local status.
-        *   Verify `JIRA_PROJECT_KEY_FROM_TASK` matches `selectedJiraProjectKey`.
-        *   Call `mcp_mcp-atlassian_jira_get_issue` for `JIRA_ISSUE_ID_FROM_TASK`.
-        *   Compare Jira status and SP (from description) with `tasks.md` entry. Propose `edit_file` for `tasks.md` if discrepancies are found (e.g., status, SP, title).
-        *   Check if task exists in Jira but not in `tasks.md` for this context (might require broader Jira search filtered by context if `tasks.md` is incomplete).
-        *   Check if task in `tasks.md` for this context is closed in Jira but still open locally.
-*   **Reference Validation**: If `qaTargetJiraIssueKey` is set, check links between local creative/plan docs (e.g., `creative-[qaTargetJiraIssueKey].md`) and the Jira task.
-
-### Step 3: Execute Phase-Specific Validation (within selected context)
-*   **Action**: Run validation steps specific to the detected phase for `activeProjectContext` or `qaTargetJiraIssueKey`.
-*   **Condition**: If detected phase is IMPLEMENT (or task is in an implementation-like status):
-    *   **Action**: Perform **DevOps Pipeline Validation** (using `activeProjectContext` settings):
-        *   Check GitLab CI config (e.g., `.gitlab-ci.yml` in the root or `activeProjectContext.gitlab_ci_config_path` if defined).
-        *   Validate CI config: `python devops-tools/gitlab/gitlab_tools.py validate-ci-config [path_to_ci_config] --repo_url [activeProjectContext.gitlab_project_id]`.
-        *   Check last pipeline status for `activeProjectContext.gitlab_default_branch`: `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_project_id]`.
-        *   **Action**: Validate additional deployment configurations if defined in `activeProjectContext`.
-        *   **Action**: Check deployment readiness and configuration files.
-        *   **Report**: "DevOps validation completed for context '[activeProjectContext.context_name]'."
-
-### Step 5: Report Results and Prepare for Transition (using selected context)
-*   **Configuration Reading**: Use `selectedJiraProjectKey` and `selectedJiraStatusMapping` from `activeProjectContext`.
-*   **Generate Report**: Mention `activeProjectContext.context_name` and `qaTargetJiraIssueKey` (if any).
-*   **If Successful**: ✅
-    *   **Update Jira Status (Only if `qaTargetJiraIssueKey` is set)**:
-        *   **Action**: Let `qaPassStatusKey = "QA_PASS"` (or a similar key defined in `integration_config.md` for QA success).
-        *   **Action**: Let `jiraTargetStatus = selectedJiraStatusMapping[qaPassStatusKey]` (e.g., the actual Jira status like "Ready for UAT" or "Done").
-        *   **Condition**: If `jiraTargetStatus` is found:
-            *   **Action**: Call `mcp_mcp-atlassian_jira_transition_issue` (or `update_issue`) for `qaTargetJiraIssueKey` to `jiraTargetStatus`.
-            *   **Report**: "Jira Task [qaTargetJiraIssueKey] in project [selectedJiraProjectKey] status updated to [jiraTargetStatus]."
-        *   **Condition**: Else (status key not found in mapping):
-            *   **Report**: "Warning: Jira status key '[qaPassStatusKey]' not found in mapping for context '[selectedContextName]'. Jira status not updated."
-    *   **Update `tasks.md` (Only if `qaTargetJiraIssueKey` is set and `qaSelectedTaskLine` exists)**:
-        *   **Action**: Propose `edit_file` for `tasks.md` to update `qaSelectedTaskLine` by appending a note like "- QA Passed." to its description. The checkbox `[ ]` might not change to `[x]` until ARCHIVE phase, depending on workflow.
-        *   **Report**: "`tasks.md` updated for [qaTargetJiraIssueKey] to reflect QA Passed."
-    *   **Transition**: Suggest next mode (e.g., REFLECT or specific next step based on context workflow).
-*   **If Failed**: ❌ (Report failure. Next steps like BUILD might be blocked for `qaTargetJiraIssueKey` if set, or for the general phase).
-
-*Instruction for AI: Sections like `UNIVERSAL MEMORY BANK VERIFICATION`, `TASK TRACKING VERIFICATION` (their old diagrammatic representations), `UNIVERSAL VALIDATION COMMAND EXECUTION`, specific `DEPENDENCY/CONFIGURATION/ENVIRONMENT/MINIMAL BUILD TEST PROCESS` sections, and report formats need thorough review. They must be adapted to use `tasks.md` as a multi-context list and perform checks against Jira within the `activeProjectContext`. Many old commands targeting a generic `tasks.md` or `memory-bank/` directory are no longer valid without context filtering.*
 
 ## 🧭 PHASE DETECTION PROCESS
 
@@ -291,31 +214,24 @@ This retains the original QA validation from the previous version:
 
 ```mermaid
 graph TD
-    IMPLEMENT["IMPLEMENT Phase<br>Validation (as part of general QA)"] --> ReadDesign["Read Design Decisions"]
-    ReadDesign --> FourChecks["Perform Technical<br>Checks (Dependencies, Config, Env, Build)"]
+    IMPLEMENT["IMPLEMENT Phase<br>Validation"] --> ReadDesign["Read Design Decisions"]
+    ReadDesign --> FourChecks["Four-Point Technical<br>Validation"]
     
     FourChecks --> DepCheck["1️⃣ Dependency<br>Verification"]
     DepCheck --> ConfigCheck["2️⃣ Configuration<br>Validation"]
     ConfigCheck --> EnvCheck["3️⃣ Environment<br>Validation"]
     EnvCheck --> MinBuildCheck["4️⃣ Minimal Build<br>Test"]
-    MinBuildCheck --> DevOpsCheck["5️⃣ DevOps Pipeline<br>Validation (NEW - see Step 3 above)"]
     
-    DevOpsCheck --> IMPLEMENTConsistency{"Technical<br>Prerequisites Met?"}
+    MinBuildCheck --> IMPLEMENTConsistency{"Technical<br>Prerequisites Met?"}
     IMPLEMENTConsistency -->|"Yes"| PassIMPLEMENT["✅ IMPLEMENT Phase<br>Validation Passed"]
     IMPLEMENTConsistency -->|"No"| FailIMPLEMENT["❌ IMPLEMENT Phase<br>Issues Found"]
     
     style IMPLEMENT fill:#4da6ff,stroke:#0066cc,color:white
     style FourChecks fill:#f6546a,stroke:#c30052,color:white
-    style DevOpsCheck fill:#6f42c1,stroke:#5a32a3,color:white
     style IMPLEMENTConsistency fill:#f6546a,stroke:#c30052,color:white
     style PassIMPLEMENT fill:#10b981,stroke:#059669,color:white
     style FailIMPLEMENT fill:#ff5555,stroke:#dd3333,color:white
 ```
-
-## 💻 5️⃣ DEVOPS PIPELINE VALIDATION PROCESS
-
-This validation point tests the integration with GitLab CI/CD pipeline and optionally with Vercel deployment.
-*This section is now integrated into Step 3 if the detected phase is IMPLEMENT.*
 
 ## 📋 UNIVERSAL VALIDATION COMMAND EXECUTION
 
@@ -509,17 +425,6 @@ grep -i "script.*src=" index.html
 │                                                                               │
 │ [Technical validation section shown only for IMPLEMENT phase]                  │
 │                                                                               │
-│ [OLD 4 Point Check - if still relevant as sub-parts of IMPLEMENT phase validation]
-│ │ DEPENDENCY VERIFICATION: [Status]
-│ │ CONFIGURATION VALIDATION: [Status]
-│ │ ENVIRONMENT VALIDATION: [Status]
-│ │ MINIMAL BUILD TEST: [Status]
-│                                                                               │
-│ 5️⃣ DEVOPS PIPELINE VALIDATION (Executed if IMPLEMENT phase)                    │
-│    ✓ GitLab CI Config: [Status]                                               │
-│    ✓ Pipeline Status: [Status]                                                │
-│    ✓ Vercel Configuration: [Status] (if applicable)                           │
-│                                                                               │
 │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━ OVERALL STATUS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
 │                                                                               │
 │ ✅ VALIDATION PASSED - Project quality verified for current phase              │
@@ -555,10 +460,6 @@ If validation fails, a detailed failure report is generated:
 │    • [Specific issue details]                                                   │
 │    • [Specific issue details]                                                   │
 │                                                                                 │
-│ ❌ DEVOPS PIPELINE ISSUES                                                       │
-│    • [Specific issue details with GitLab CI pipeline]                           │
-│    • [Specific issue details with Vercel configuration (if applicable)]         │
-│                                                                                 │
 │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━ REQUIRED FIXES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
 │                                                                                 │
 │ 1. [Specific fix instruction with command]                                      │
@@ -592,61 +493,3 @@ graph TD
 ```
 
 This enhanced QA mode serves as a "quality guardian" throughout the development process, ensuring documentation is consistently maintained and all phase requirements are met before proceeding to the next phase. 
-
-## 🧪 QA VALIDATION STEPS
-
-### Step 1: Detect Current Phase and Prepare
-- **Action**: Analyze files to determine current project phase.
-- **Action**: Load appropriate validation checklist based on phase.
-
-### Step 2: Perform Universal Checks
-- **Action**: Verify Memory Bank file consistency.
-- **Action**: Validate task tracking in tasks.md.
-- **Action**: Check cross-references between documents.
-
-### Step 3: Execute Phase-Specific Validation
-- **Action**: Run validation steps specific to the detected phase.
-- **Action**: For IMPLEMENT phase, perform technical validation including dependency, configuration, environment, and build checks AS WELL AS **DevOps Pipeline Validation** as detailed above (using `activeProjectContext`):
-  - **Action**: Check for existence and validity of GitLab CI configuration (e.g. `[activeProjectContext.gitlab_ci_config_path]` or default `.gitlab-ci.yml`).
-  - **Action**: Validate CI/CD pipeline status using `python devops-tools/gitlab/gitlab_tools.py check-pipeline [activeProjectContext.gitlab_default_branch] --repo_url [activeProjectContext.gitlab_project_id]`.
-  - **Action**: Validate additional deployment configurations if defined in `activeProjectContext`.
-
-### Step 4: Compile Results and Generate Report
-- **Action**: Compile all validation results into a comprehensive report.
-- **Action**: Format report with clear pass/fail indicators for each check.
-- **Action**: Include specific error details and fix suggestions for any failures.
-
-### Step 5: Report Results and Prepare for Transition
-
-- **Configuration Reading**:
-    - **Action**: Read the `integration_config.md` file to get Jira configuration.
-    - **Data**: Extract `Project Key` and Jira status for VAN QA phase (e.g., `In Progress`).
-
-- **Generate Report**: Create either a success or failure report based on the validation outcome.
-- **If Successful**: ✅
-    - **Update Jira Status**:
-        - **Action**: Read `tasks.md` to find the current task and its Jira ID.
-        - **Action**: Call `mcp_mcp-atlassian_jira_update_issue`.
-        - **Parameters**:
-            - `issue_key`: The Jira ID retrieved from `tasks.md`.
-            - `fields`: `'{"status": {"name": "$STATUS_NAME"}}'` where `$STATUS_NAME` is from the configuration (e.g., "In Progress").
-            - *Note: May require `transition_issue` if direct update fails*.
-        - **Error Handling**: Retry once on MCP failure, then report and ask user.
-    - **Transition**: Signal successful validation and suggest switching to BUILD/IMPLEMENT mode.
-    ```
-    ✅ TECHNICAL VALIDATION COMPLETE
-    Jira Story status updated based on configuration.
-    All prerequisites verified successfully.
-    You may now proceed to BUILD mode.
-    Type 'BUILD' or 'IMPLEMENT' to begin implementation.
-    ```
-- **If Failed**: ❌
-    - **Transition**: Report the failure, indicating that BUILD mode is blocked, and prompt the user to fix the issues and re-run QA.
-    ```
-    ⚠️ QA VALIDATION FAILED
-    See report above for details.
-    Jira Story status remains unchanged.
-    BUILD MODE IS BLOCKED until these issues are resolved.
-    Type 'VAN QA' after fixing the issues to re-validate.
-
-    ```

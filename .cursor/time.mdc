@@ -1,6 +1,0 @@
----
-description: 
-globs: 
-alwaysApply: true
----
-⏰ When time/date/дата/время/час is mentioned, execute: `python -c "import datetime; print(datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S'))"`

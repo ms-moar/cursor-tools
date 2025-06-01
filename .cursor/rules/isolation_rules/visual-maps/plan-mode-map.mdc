@@ -35,11 +35,20 @@ graph TD
 
 ### Step 1: Auto-Sync Tasks (Jira & tasks.md)
 *   **(Optional) Action**: Read `tasks.md` line by line.
-    *   For each line, parse `JIRA_PROJECT_KEY`, `JIRA_ISSUE_ID`, and current local status.
-    *   Find the corresponding `Project Context` in `integration_config.md` using `JIRA_PROJECT_KEY`.
-    *   Call `mcp_mcp-atlassian_jira_get_issue` for `JIRA_ISSUE_ID` in its specific project to get its current status in Jira.
-    *   Compare Jira status with local status. If different and Jira status is a "completed" one (e.g., matches `ARCHIVE` or `REFLECT` status in the context's `jira_status_mapping`), propose `edit_file` for `tasks.md` to update the status for that line.
-*   **Report**: Briefly report sync results.
+    *   For each line, parse `JIRA_PROJECT_KEY`, `JIRA_ISSUE_ID`, current local status, and current local Story Points (e.g., from a pattern like `SP_VALUE=[X]`).
+    *   Find the corresponding `Project Context` in `integration_config.md` using `JIRA_PROJECT_KEY`. Let this be `taskSpecificContext`.
+    *   If `taskSpecificContext` is found:
+        *   Let `fieldsToFetch = ["status"]`.
+        *   If `taskSpecificContext.jira_sp_field_id` is defined, add `taskSpecificContext.jira_sp_field_id` to `fieldsToFetch`.
+        *   Call `mcp_mcp-atlassian_jira_get_issue` for `JIRA_ISSUE_ID` in its specific project, requesting `fieldsToFetch`.
+        *   Let `jiraStatus = result.status.name` (or ID).
+        *   Let `jiraSpValue = result.fields[taskSpecificContext.jira_sp_field_id]` if present and `jira_sp_field_id` was fetched.
+        *   Let `lineToUpdate = false` and `updatedLineContent = original_line_from_tasks_md`.
+        *   Compare `jiraStatus` with local status. If different and `jiraStatus` is a "completed" one (e.g., matches `ARCHIVE` or `REFLECT` status in `taskSpecificContext.jira_status_mapping`), mark task for update to `[x]` in `updatedLineContent` and set `lineToUpdate = true`.
+        *   If `jiraSpValue` is available and different from local Story Points (or local SP is missing):
+            *   Update `updatedLineContent` to include/replace the SP part (e.g., `SP_VALUE=[jiraSpValue]`). Ensure the format matches `integration_config.md` specifications for `tasks.md` lines. Set `lineToUpdate = true`.
+        *   If `lineToUpdate` is true, propose `edit_file` for `tasks.md` to replace the original line with `updatedLineContent`.
+*   **Report**: Briefly report sync results, including SP updates if any.
 
 ### Step 2: Read Global Project Context & Configs
 *   **Action**: Read relevant general context files (e.g., `projectbrief.md` if global, user's initial request for planning).
@@ -86,74 +95,54 @@ graph TD
 
 ### Step 5.1: Process Epics & Tasks for Jira Creation (using selected context)
 *   **Action**: Initialize an empty list `createdOrUpdatedJiraIssues = []` to store details of issues successfully processed with Jira.
+*   **Action**: Determine the initial Jira status for new issues. If `activeProjectContext.jira_status_mapping` exists and has a mapping for a "new" or "todo" equivalent status (e.g., `activeProjectContext.jira_status_mapping.PLAN.start`), use that target status ID. Otherwise, Jira will use its project default.
 *   **Action**: For each Epic in the plan from Step 4 (`epicName`, and its list of tasks with SPs now in `SP_VALUE=X` format):
-    *   Calculate `totalEpicSp` (parsing X from `SP_VALUE=X`). Create `taskListStringForEpicDesc` (listing tasks with their `SP_VALUE=X`) and `epicDescription` (including `SP_VALUE=[totalEpicSp]` and `Project Context: [selectedContextName]`).
+    *   Calculate `totalEpicSp` (parsing X from `SP_VALUE=X`). Create `taskListStringForEpicDesc` (listing tasks with their `SP_VALUE=X`).
+    *   Let `baseEpicDescription = "Total Story Points: SP_VALUE=[totalEpicSp]\\nProject Context: \'[selectedContextName]\'\\nTasks:\\n" + taskListStringForEpicDesc`.
+    *   Let `finalEpicDescription = (activeProjectContext.jira_description_prefix || "") + baseEpicDescription + (activeProjectContext.jira_description_suffix || "") + "\\n\\nПримечание: Задача создана с помощью ИИ."`.
     *   Let `assigneeLogin = activeProjectContext.Jira_login`.
-    *   Let `aiNote = "\\n\\nПримечание: Задача создана с помощью ИИ."`.
     *   Let `aiCreatedLabel = "created-by-ai"`.
+    *   Let `contextLabel = "context-" + selectedContextName`.
+    *   Let `epicLabels = [aiCreatedLabel, contextLabel]`.
+    *   If `activeProjectContext.jira_default_labels` AND `activeProjectContext.jira_default_labels.epic` exists, append them to `epicLabels`.
     *   Let `jiraComponent = activeProjectContext.jira_component`.
     *   Let `shouldSetComponent = (jiraComponent != "NO_NAME")`.
-    *   **Condition**: If `totalEpicSp < 7`:
-        *   Ask user about consolidating. If yes:
-            *   Let `finalEpicDescription = epicDescription + aiNote`.
-            *   Let `labels = [aiCreatedLabel]`.
-            *   **Condition**: If `shouldSetComponent`:
-                *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `finalEpicDescription`, assignee `assigneeLogin`, labels `labels`, components `[jiraComponent]`).
-            *   **Condition**: Else:
-                *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `finalEpicDescription`, assignee `assigneeLogin`, labels `labels`).
-            *   If successful, add `{jira_id: EPIC_KEY, title: epicName, sp_value: totalEpicSp, description: taskListStringForEpicDesc, is_epic_only: true}` to `createdOrUpdatedJiraIssues`.
-        *   If user says no to consolidation, proceed as if `totalEpicSp >= 7`.
-    *   **Condition**: Else (`totalEpicSp >= 7` or user disagreed with consolidation):
-                    *   Ask user to create Epic. If yes:
-                *   Let `finalEpicDescription = "Total Story Points: SP_VALUE=[totalEpicSp]\\nProject Context: \'[selectedContextName]\'" + aiNote`.
-                *   Let `labels = [aiCreatedLabel]`.
-                *   **Condition**: If `shouldSetComponent`:
-                    *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `finalEpicDescription`, assignee `assigneeLogin`, labels `labels`, components `[jiraComponent]`).
-                *   **Condition**: Else:
-                    *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `finalEpicDescription`, assignee `assigneeLogin`, labels `labels`).
-            *   If successful, let `parentEpicKey` be the new Jira key. Add `{jira_id: parentEpicKey, title: epicName, sp_value: totalEpicSp, description: "(Epic - tasks listed separately)", is_epic_only: false, sub_tasks: []}` to `createdOrUpdatedJiraIssues`.
-            *   Report success.
+    *   Let `componentsPayloadEpic = shouldSetComponent ? [jiraComponent] : []`.
+    *   Let `customFieldsPayloadEpic = {}`.
+    *   If `activeProjectContext.jira_sp_field_id` AND `totalEpicSp` is not null:
+        *   `customFieldsPayloadEpic[activeProjectContext.jira_sp_field_id] = totalEpicSp`.
+    *   If `activeProjectContext.jira_custom_fields` AND `activeProjectContext.jira_custom_fields.epic` exists:
+        *   For each `field` in `activeProjectContext.jira_custom_fields.epic`:
+            *   `customFieldsPayloadEpic[field.id] = field.value // Adapt value if dynamic based on epic data`.
+    *   **Condition**: If `totalEpicSp < 7` AND `activeProjectContext.jira_consolidate_small_epics` is true:
+        *   Ask user: "Epic '[epicName]' has SP [totalEpicSp] (<7). Consolidate tasks directly into this Epic description without creating separate sub-tasks in Jira?".
+        *   If user agrees:
+            *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `finalEpicDescription`, assignee `assigneeLogin`, labels `epicLabels`, components `componentsPayloadEpic`, custom_fields `customFieldsPayloadEpic`).
+            *   If successful (let `newlyCreatedEpicKey` be the key), add `{jira_id: newlyCreatedEpicKey, title: epicName, sp_value: totalEpicSp, description: taskListStringForEpicDesc, is_epic_only: true}` to `createdOrUpdatedJiraIssues`.
+            *   Report success. If `activeProjectContext.jira_auto_assign_on_create` is true AND `assigneeLogin` is not empty, propose `mcp_mcp-atlassian_jira_assign_issue` for `newlyCreatedEpicKey` to `assigneeLogin`.
+        *   If user disagrees, proceed as if `totalEpicSp >= 7`.
+    *   **Condition**: Else (`totalEpicSp >= 7` or user disagreed with consolidation or `activeProjectContext.jira_consolidate_small_epics` is false):
+        *   Ask user: "Create Epic '[epicName]' in Jira? Its tasks will be created as sub-tasks."
+        *   If user agrees:
+            *   Call `mcp_mcp-atlassian_jira_create_issue` for Epic (project `selectedJiraProjectKey`, summary `epicName`, type 'Epic', description `finalEpicDescription`, assignee `assigneeLogin`, labels `epicLabels`, components `componentsPayloadEpic`, custom_fields `customFieldsPayloadEpic`).
+            *   If successful, let `parentEpicKey` be the new Jira key. Add `{jira_id: parentEpicKey, title: epicName, sp_value: totalEpicSp, description: "(Epic - tasks listed separately as sub-tasks)", is_epic_only: false, sub_tasks: []}` to `createdOrUpdatedJiraIssues`.
+            *   Report success. If `activeProjectContext.jira_auto_assign_on_create` is true AND `assigneeLogin` is not empty, propose `mcp_mcp-atlassian_jira_assign_issue` for `parentEpicKey` to `assigneeLogin`.
             *   For each task (`taskName`, `taskSpValue` (e.g., "SP_VALUE=3"), `taskDescription`) under this Epic:
-                *   Confirm other Jira details (components, labels).
                 *   Let `parsedTaskSp = X` (from `taskSpValue`).
-                                    *   Let `jiraTaskDescription = "Story Points: SP_VALUE=[parsedTaskSp]\\nProject Context: \'[selectedContextName]\'\\n\\nOriginal Description:\\n" + taskDescription + aiNote`.
-                    *   Ask user to create Jira issue. If yes:
-                        *   Let `taskLabels = [aiCreatedLabel]`.
-                        *   **Condition**: If `shouldSetComponent`:
-                            *   Call `mcp_mcp-atlassian_jira_create_issue` for Task (project `selectedJiraProjectKey`, summary `taskName`, type `selectedJiraDefaultIssueType`, description `jiraTaskDescription`, parent `parentEpicKey`, assignee `assigneeLogin`, labels `taskLabels`, components `[jiraComponent]`).
-                        *   **Condition**: Else:
-                            *   Call `mcp_mcp-atlassian_jira_create_issue` for Task (project `selectedJiraProjectKey`, summary `taskName`, type `selectedJiraDefaultIssueType`, description `jiraTaskDescription`, parent `parentEpicKey`, assignee `assigneeLogin`, labels `taskLabels`).
-                    *   If successful, add/append to `sub_tasks` of the parent Epic in `createdOrUpdatedJiraIssues`: `{jira_id: TASK_KEY, title: taskName, sp_value: parsedTaskSp, description: taskDescription}`.
+                *   Let `baseTaskDescription = "Story Points: SP_VALUE=[parsedTaskSp]\\nProject Context: \'[selectedContextName]\'\\n\\nOriginal Description:\\n" + taskDescription`.
+                *   Let `finalTaskDescription = (activeProjectContext.jira_description_prefix || "") + baseTaskDescription + (activeProjectContext.jira_description_suffix || "") + "\\n\\nПримечание: Задача создана с помощью ИИ."`.
+                *   Let `taskLabels = [aiCreatedLabel, contextLabel]`.
+                *   If `activeProjectContext.jira_default_labels` AND `activeProjectContext.jira_default_labels.task` exists, append them to `taskLabels`.
+                *   Let `componentsPayloadTask = shouldSetComponent ? [jiraComponent] : []`. // Or task-specific component if defined
+                *   Let `customFieldsPayloadTask = {}`.
+                *   If `activeProjectContext.jira_sp_field_id` AND `parsedTaskSp` is not null:
+                    *   `customFieldsPayloadTask[activeProjectContext.jira_sp_field_id] = parsedTaskSp`.
+                *   If `activeProjectContext.jira_custom_fields` AND `activeProjectContext.jira_custom_fields.task` exists:
+                    *   For each `field` in `activeProjectContext.jira_custom_fields.task`:
+                        *   `customFieldsPayloadTask[field.id] = field.value // Adapt value if dynamic based on task data`.
+                *   Ask user to create Jira issue for task '[taskName]'. If yes:
+                    *   Call `mcp_mcp-atlassian_jira_create_issue` for Task (project `selectedJiraProjectKey`, summary `taskName`, type `selectedJiraDefaultIssueType`, description `finalTaskDescription`, parent `parentEpicKey`, assignee `assigneeLogin`, labels `taskLabels`, components `componentsPayloadTask`, custom_fields `customFieldsPayloadTask`).
+                    *   If successful (let `newlyCreatedTaskKey` be the key), add/append to `sub_tasks` of the parent Epic in `createdOrUpdatedJiraIssues`: `{jira_id: newlyCreatedTaskKey, title: taskName, sp_value: parsedTaskSp, description: taskDescription}`.
                     *   Report success.
-*   **Report**: "Jira issue creation/update process completed for project context '[selectedContextName]'."
-
-### Step 5.2: Update Local `tasks.md` File
-*   **Action**: Read `integration_config.md` for the `tasks.md` line format (which now includes `SP_VALUE=[X]`).
-*   **Action**: For each entry in `createdOrUpdatedJiraIssues`:
-    *   **Condition**: If `is_epic_only` is true for an Epic entry:
-        *   Formulate the `tasks.md` line: `- [ ] **[[selectedJiraProjectKey]:[epic.jira_id]]** [EPIC] [epic.title] - *Tasks in description* - SP_VALUE=[epic.sp_value] (Context: [selectedContextName])`
-        *   Propose `edit_file` to append this line to `tasks.md` under a relevant heading (e.g., `## Epics for [selectedContextName]`).
-    *   **Condition**: Else (it's an Epic with separate tasks, or a standalone task if Epics are not used for some reason):
-        *   If it's an Epic (`parentEpicKey` was set for it), formulate its line:
-          `- [ ] **[[selectedJiraProjectKey]:[epic.jira_id]]** [EPIC] [epic.title] - SP_VALUE=[epic.sp_value] (Context: [selectedContextName])`
-        *   Propose `edit_file` to append this line to `tasks.md`.
-        *   For each `sub_task` associated with this Epic in `createdOrUpdatedJiraIssues`:
-            *   Formulate the `tasks.md` line: `- [ ] **[[selectedJiraProjectKey]:[sub_task.jira_id]]** [sub_task.title] - *[sub_task.description]* - SP_VALUE=[sub_task.sp_value] (Context: [selectedContextName])`
-            *   Propose `edit_file` to append this line to `tasks.md` (indented under the Epic, if possible, or as a flat list).
-*   **Report**: "`tasks.md` has been updated/proposed with new tasks for project context '[selectedContextName]'."
-
-### Step 5.3: Propose Epic Git Branch Creation (Optional)
-*   **Action**: For each Epic entry in `createdOrUpdatedJiraIssues` (where `is_epic_only` is false, meaning it's a larger epic with sub-tasks, or even for `is_epic_only` if desired):
-    *   Let `epicKey = epic.jira_id`.
-    *   Let `defaultBranch = activeProjectContext.gitlab_default_branch` (e.g., 'main' or 'develop').
-    *   Propose a branch name, e.g., `epicBranchName = "epic/[epicKey]"`.
-    *   **Action**: Ask user: "An Epic [epicKey] ([epic.title]) has been planned. Would you like to create a dedicated Git branch named '[epicBranchName]' from '[defaultBranch]' for this Epic? Feature branches for its tasks can then be created from this epic branch."
-    *   **Condition**: If user agrees:
-        *   **Action**: Propose `run_terminal_cmd` with `git checkout -b [epicBranchName] [defaultBranch]`.
-        *   **Action**: Wait for approval.
-        *   **Report**: "Git branch '[epicBranchName]' for Epic [epicKey] has been proposed/created from '[defaultBranch]'."
-    *   **Condition**: If user declines:
-        *   **Report**: "OK, a dedicated branch for Epic [epicKey] will not be created at this time. Feature branches will be based off '[defaultBranch]'."
-
-### Step 6: PLAN Mode End
-*   The mode concludes. User can review Jira, `tasks.md`, and Git branches.
+                    *   If `activeProjectContext.jira_auto_assign_on_create` is true AND `assigneeLogin` is not empty:
+                        *   Propose `

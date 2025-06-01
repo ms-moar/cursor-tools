@@ -183,22 +183,6 @@ Documentation requirements scale based on complexity level:
 | Testing Requirements | Basic | Standard | Comprehensive | Rigorous |
 | Documentation | Minimal | Standard | Detailed | Extensive |
 
-## 🤖 AI TRANSPARENCY AND VALIDATION
-
-All modes now include integrated AI task validation:
-- **AI Labels**: `created-by-ai`, `edited-by-ai` automatically applied
-- **Task Validation**: Automatic interpretation and user confirmation for unlabeled tasks
-- **Context-Aware**: Each mode presents specialized validation (design, implementation, etc.)
-- **Story Points**: Estimation included in validation process
-
-## 🏗️ AUTOMATIC COMPONENT ASSIGNMENT
-
-All Jira operations automatically include component assignment:
-- **Component Source**: Read from `activeProjectContext.jira_component` in `integration_config.md`
-- **Auto-Assignment**: If component is NOT "NO_NAME", automatically set component in all Jira create/update operations
-- **Scope**: Applies to task creation, task updates, Epic creation, and all Jira modifications
-- **Validation**: Component existence verified before assignment
-
 ## 📑 OPTIMIZED TEMPLATES BY LEVEL
 
 ### Level 1: Quick Fix Template
@@ -251,21 +235,3 @@ To use the optimized system:
 3. Use progressive documentation appropriate to task complexity
 4. Let the system manage rule loading and context preservation
 5. Enjoy the improved token efficiency while maintaining structured development
-
-## 🗣️ AI COMMUNICATION PROTOCOL
-
-**Instruction for AI:** You **MUST** start every message to the user with the following line, replacing `[Current Working Directory]` with the actual current working directory relative to the project root, or the absolute path if outside the project root:
-
-`**📂 Проект: cursor-memory-bank | Папка: [Current Working Directory]**`
-
-This ensures clarity about the context of your operations at all times.
-
-## 🔒 MANDATORY SECURITY RULES
-
-When working with files in the project, the following rules **MUST** be observed by the AI:
-
-1.  **Backup Before Deletion**: Before deleting any file for any reason, its backup copy **MUST** be created in the `backup-files/` folder.
-2.  **Create Backup Directory**: If the `backup-files/` directory is missing, it **MUST** be created automatically by the AI before attempting to save a backup.
-3.  **Backup File Naming**: The backup file name format **MUST** be: `{original_filename}_{timestamp}.bak`. The timestamp should be in `YYYYMMDDHHMMSS` format (e.g., `myfile.txt_20240515103000.bak`).
-
-These rules are critical for data safety and project integrity.

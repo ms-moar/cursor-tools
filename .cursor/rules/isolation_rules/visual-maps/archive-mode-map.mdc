@@ -271,4 +271,51 @@ When archiving is complete, notify user with:
 
 → Memory Bank is ready for the next task
 → To start a new task, use VAN MODE
-``` 
+```
+
+## 🔄 Step X.1: Create/Update Confluence Page (using `activeProjectContext.confluence_space_key`)
+*   **Action**: Read the content of the local archive document: `localArchivePath = "docs/archive/[activeProjectContext.context_name]/[selectedJiraIssueKey].md"`. Let `pageContentForConfluence` be this content (ensure it is Confluence compatible, e.g. Markdown or converted to XHTML if necessary).
+*   **Action**: Determine Confluence Space Key: `confluenceSpaceKey = activeProjectContext.confluence_space_key`.
+    *   If `confluenceSpaceKey` is missing or invalid, report error and skip Confluence steps.
+*   **Action**: Determine Parent Page ID: `parentPageId = activeProjectContext.confluence_parent_page_id_archive` (can be null).
+*   **Action**: Construct Page Title: `pageTitle = activeProjectContext.confluence_archive_page_title_format` (e.g., "Archive: [selectedTask.title] ([selectedJiraIssueKey])" - replace placeholders with actual values).
+*   **Action**: Check for Existing Page: Call `mcp_mcp-atlassian_confluence_get_page_by_title` with `space_key=confluenceSpaceKey` and `title=pageTitle`.
+    *   Let `existingPage = result`.
+*   **Condition**: If `existingPage` is found (e.g., `existingPage.id` exists):
+    *   **Action**: Let `existingPageId = existingPage.id` and `existingVersionNumber = existingPage.version.number`.
+    *   **Action**: Ask user: "Confluence page '[pageTitle]' (ID: [existingPageId]) already exists. Update it with new archive content?"
+    *   **Condition**: If user agrees to update:
+        *   **Action**: Call `mcp_mcp-atlassian_confluence_update_page` with `page_id=existingPageId`, `title=pageTitle` (usually kept same), `space_key=confluenceSpaceKey`, `body_content=pageContentForConfluence`, `version_number=existingVersionNumber + 1`.
+        *   **Report**: "Confluence page [existingPageId] updated. URL: [page_url_from_response]". Store `confluencePageUrl`.
+    *   **Condition**: Else (user declines update):
+        *   **Report**: "Confluence page update skipped by user."
+*   **Condition**: If `existingPage` is NOT found:
+    *   **Action**: Call `mcp_mcp-atlassian_confluence_create_page` with `space_key=confluenceSpaceKey`, `title=pageTitle`, `body_content=pageContentForConfluence`, and `parent_id=parentPageId` (if `parentPageId` is not null).
+    *   **Report**: "New Confluence page '[pageTitle]' created. URL: [page_url_from_response]". Store `confluencePageUrl`.
+*   **Condition**: (After successful create/update) If `activeProjectContext.confluence_add_labels_on_archive` is true AND `activeProjectContext.confluence_default_archive_labels` (e.g., ["archive", "task-[selectedJiraIssueKey]"]) are defined:
+    *   **Action**: Let `pageIdToLabel = newly_created_page_id` or `existingPageId`.
+    *   **Action**: Call `mcp_mcp-atlassian_confluence_add_labels_to_content` with `page_id=pageIdToLabel` and `labels=activeProjectContext.confluence_default_archive_labels`.
+    *   **Report**: "Labels added to Confluence page."
+*   **Error Handling**: Report any errors from Confluence API calls.
+
+## 🔄 Step X.3: Update Jira Issue Status to Final (e.g., Closed/Archived from `activeProjectContext.jira_status_mapping`)
+*   **Action**: Identify the final target status details from `activeProjectContext.jira_status_mapping.ARCHIVE`. This should provide `target_status_id` (preferred) or `target_status_name`, and `allowed_from_statuses_ids` or `allowed_from_statuses_names`.
+    *   If mapping is incomplete, report error and skip Jira update or ask for manual confirmation of target status.
+*   **Action**: Let `finalTargetStatusId = activeProjectContext.jira_status_mapping.ARCHIVE.target_status_id`.
+*   **Action**: Let `finalTargetStatusName = activeProjectContext.jira_status_mapping.ARCHIVE.target_status_name`.
+*   **Action**: Let `allowedFromStatuses = activeProjectContext.jira_status_mapping.ARCHIVE.allowed_from_statuses_ids` (or `_names`).
+*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` to get `currentJiraStatusId` or `currentJiraStatusName`.
+*   **Condition**: If `currentJiraStatusId` (or name) is NOT in `allowedFromStatuses`:
+    *   **Report**: "WARNING: Current Jira status for [selectedJiraIssueKey] is '[currentJiraStatusName]'. This is not an allowed status to directly transition to '[finalTargetStatusName]'. An intermediate manual transition might be required."
+    *   **Action**: Ask user if they want to attempt the transition anyway.
+    *   If user declines, skip automated transition.
+*   **Action**: (If proceeding) Call `mcp_mcp-atlassian_jira_transition_issue` with `issue_key=selectedJiraIssueKey` and `transition_id=finalTargetStatusId` (or `transition_name=finalTargetStatusName`).
+*   **Report**: "Jira issue [selectedJiraIssueKey] transitioned to [finalTargetStatusName]."
+*   **Condition**: If `activeProjectContext.jira_add_comment_on_archive` is true:
+    *   **Action**: Let `archiveComment = activeProjectContext.jira_archive_comment_template` (e.g., "Task archived. See Confluence: [confluencePageUrl], GitLab Tag: [gitLabTagUrl]"). Replace placeholders.
+    *   **Action**: Call `mcp_mcp-atlassian_jira_add_comment` with `issue_key=selectedJiraIssueKey` and `comment_body=archiveComment`.
+    *   **Report**: "Comment added to Jira issue [selectedJiraIssueKey]."
+*   **Condition**: If `activeProjectContext.jira_update_resolution_on_archive` is true AND `activeProjectContext.jira_resolution_name_for_archive` (e.g., "Done", "Fixed") is defined:
+    *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue_resolution` with `issue_key=selectedJiraIssueKey` and `resolution_name=activeProjectContext.jira_resolution_name_for_archive`.
+    *   **Report**: "Resolution for Jira issue [selectedJiraIssueKey] set to '[activeProjectContext.jira_resolution_name_for_archive]'."
+*   **Error Handling**: Report any errors from Jira API calls. 

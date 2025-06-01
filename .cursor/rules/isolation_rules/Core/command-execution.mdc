@@ -3,7 +3,6 @@ description: Command execution guidelines for isolation-focused Memory Bank
 globs: command-execution.mdc
 alwaysApply: false
 ---
-
 # COMMAND EXECUTION SYSTEM
 
 > **TL;DR:** This system provides guidelines for efficient command execution, balancing clarity and token optimization through appropriate command chaining, with proper documentation of commands and results.
@@ -232,4 +231,85 @@ graph TD
     W3 --> S3["Prefer built-in<br>command capabilities"]
     W4 --> S4["Show confirmation<br>before destructive actions"]
     W5 --> S5["Verify directory before<br>npm/build commands"]
-``` 
+```
+
+## 📋 COMMAND AND FILE OPERATION AUDITING
+
+> **TL;DR:** This section outlines the mandatory auditing requirements for all executed commands and significant file operations to ensure traceability, security, and accountability.
+
+### 1. Audit Log Requirements
+
+An audit log **MUST** be maintained for critical operations. This log can be a designated file (e.g., `memory-bank/audit_log.md` or `logs/audit.log`) or integrated into system progress reports (`progress.md`) if detailed enough.
+
+**Each audit log entry MUST include:**
+
+*   **Timestamp**: `YYYY-MM-DD HH:MM:SS UTC`
+*   **Operation Type**: e.g., `CMD_EXEC`, `FILE_CREATE`, `FILE_EDIT`, `FILE_DELETE`, `API_CALL`
+*   **Command/Operation Details**: The exact command executed or a description of the file operation (e.g., `edit_file on .cursor/rules/main.mdc`).
+*   **Parameters (if applicable)**: Key parameters used (e.g., for `edit_file` - target file; for API calls - endpoint and key request data; for commands - arguments).
+*   **Executor**: `AI (Agent Version X.Y)` or `User (if user-initiated via explicit command)`.
+*   **Context**: Current active project context name or ID, if applicable.
+*   **Outcome**: `SUCCESS`, `FAILURE`, `USER_CANCELLED`.
+*   **Result/Output Summary**: Brief summary of the output or result. For `FAILURE`, include the error message or code.
+*   **Affected Resources**: List of files/resources created, modified, or deleted.
+
+**Example Audit Log Entry (Markdown format for `audit_log.md`):**
+
+```markdown
+- **Timestamp**: 2024-05-17 10:30:00 UTC
+- **Operation Type**: `FILE_EDIT`
+- **Details**: `edit_file on .cursor/rules/main.mdc`
+- **Executor**: `AI (Agent 2.1)`
+- **Context**: `ProjectAlpha_MainContext`
+- **Outcome**: `SUCCESS`
+- **Result Summary**: "Expanded MANDATORY SECURITY RULES section."
+- **Affected Resources**: `.cursor/rules/main.mdc` (modified)
+---
+- **Timestamp**: 2024-05-17 10:35:15 UTC
+- **Operation Type**: `CMD_EXEC`
+- **Details**: `git commit -m "Update security rules"`
+- **Executor**: `AI (Agent 2.1)`
+- **Context**: `ProjectAlpha_MainContext`
+- **Outcome**: `SUCCESS`
+- **Result Summary**: "[main abc1234] Update security rules. 1 file changed."
+- **Affected Resources**: Git repository
+```
+
+### 2. Operations to Audit
+
+The following operations **MUST** be logged:
+
+*   **All `run_terminal_cmd` executions:** Log the command, parameters, and outcome.
+*   **All `edit_file` operations:** Log the target file and a brief description of the change (e.g., "Added new section XYZ").
+*   **All `create_file` operations:** Log the new file path and type.
+*   **All `delete_file` operations:** Log the path of the deleted file.
+*   **Significant API Calls (if applicable, e.g., to external services like Jira, DeepSeek):** Log the API endpoint, key request parameters, and a summary of the response or outcome.
+*   **Security-Related Events:**
+    *   Backup creation (success/failure).
+    *   File integrity check failures.
+    *   Syntax validation failures for critical files.
+    *   User confirmations for destructive operations.
+
+### 3. Audit Log Review
+
+While direct AI review of the audit log is complex, the AI **MUST** ensure that:
+1.  Log entries are being generated correctly for audited operations.
+2.  It can, upon request, retrieve recent audit log entries related to a specific file or time period if the log is structured (e.g., in `progress.md` or a dedicated log file).
+
+**Workflow for Auditing an Operation:**
+
+```mermaid
+graph TD
+    Operation["Operation Triggered<br>(e.g., edit_file, run_terminal_cmd)"] --> GatherInfo["1. Gather Audit Information<br>(Timestamp, Details, Context, etc.)"]
+    GatherInfo --> FormatLog["2. Format Log Entry<br>According to specified structure"]
+    FormatLog --> WriteLog["3. Write Log Entry<br>To audit_log.md or progress.md"]
+    WriteLog --> VerifyWrite{"4. Verify Log Write<br>(Optional, if feasible)"}
+    VerifyWrite -- Success --> OpComplete["Operation & Auditing Complete"]
+    VerifyWrite -- Failure --> LogWriteError["Log/Report Audit Write Failure<br>Proceed with operation carefully"]
+    LogWriteError --> OpComplete
+
+    style Operation fill:#cceeff
+    style WriteLog fill:#ccffcc
+```
+
+This auditing mechanism is crucial for maintaining a transparent and secure operational history. 

@@ -1,3 +1,13 @@
+--- 
+description: "Central configuration for multi-project context, integrations (Jira, GitLab, Confluence, DeepSeek), and tool settings. The structure and usage of this file are governed by the .cursor/rules/isolation_rules/Core/multi-context-system.mdc rule."
+globs: ["integration_config.md"]
+alwaysApply: false
+---
+
+# Integration & Project Context Configuration
+
+> **IMPORTANT**: The structure, available fields, and logic for interpreting this configuration are defined in detail in the `.cursor/rules/isolation_rules/Core/multi-context-system.mdc` rule. Refer to it for comprehensive guidance on how to define and use project contexts and their specific settings.
+
 # Integration Configuration for Memory Bank System
 
 ## Project Contexts

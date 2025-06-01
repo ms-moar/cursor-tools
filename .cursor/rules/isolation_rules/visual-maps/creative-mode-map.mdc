@@ -3,32 +3,69 @@ description: Visual process map for CREATIVE mode (Design Decisions)
 globs: "**/creative*/**", "**/design*/**", "**/decision*/**"
 alwaysApply: false
 ---
-# CREATIVE MODE: DESIGN PROCESS MAP (Multi-Context)
 
-> **TL;DR:** Guides structured design decision-making for a task selected from `tasks.md` (within a chosen Project Context), syncing with Jira.
+# CREATIVE MODE: DESIGN PROCESS MAP
 
-**Key Enhancements:**
-- Simplified structure with focus on integrations
-- Jira and Confluence integration
-- Epic-aware Git workflow
-- Multi-context project support
-- Streamlined creative process
+> **TL;DR:** This visual map guides the CREATIVE mode process, focusing on structured design decision-making for components that require deeper exploration before implementation.
 
 ## 🧭 CREATIVE MODE PROCESS FLOW
 
 ```mermaid
 graph TD
-    Start["CREATIVE Mode Start"] --> ReadGlobalConfig["Step 0.1: Read Global Configs"]
-    ReadGlobalConfig --> SelectActiveContext["Step 0.2: Select Active Project Context"]
-    SelectActiveContext --> AutoSyncTasksMD["Step 1: Auto-Sync tasks.md with Jira (all contexts)"]
-    AutoSyncTasksMD --> TaskSelect["Step 2: Select Task from tasks.md for Creative Work (filtered by active context)"]
-    TaskSelect --> JiraStatusAssigneeCheck["Step 3: Check Jira Status/Assignee & Propose Updates (for selected task in its context)"]
-    JiraStatusAssigneeCheck --> UpdateTasksMDWithJiraStatus["Step 3.1: Update tasks.md with Jira Status/Assignee"]
-    UpdateTasksMDWithJiraStatus --> GitCheck["Step 4: Check/Propose Git Branch for Task (considering Epic branch)"]
-    GitCheck --> CreativeWork["Step 5: Execute Creative Design Process (for selected Jira task)"]
-    CreativeWork --> UpdateTasksMDWithCreativeProgress["Step 5.1: Update tasks.md with Creative Phase Progress/Completion"]
-    UpdateTasksMDWithCreativeProgress --> SuggestNext["Step 6: Suggest Next Mode (IMPLEMENT)"]
-    SuggestNext --> End["CREATIVE Mode End"]
+    Start["START CREATIVE MODE"] --> ReadTasks["Read tasks.md<br>For Creative Requirements"]
+    
+    %% Initial Assessment
+    ReadTasks --> VerifyPlan{"Plan Complete<br>& Creative Phases<br>Identified?"}
+    VerifyPlan -->|"No"| ReturnPlan["Return to<br>PLAN Mode"]
+    VerifyPlan -->|"Yes"| IdentifyPhases["Identify Creative<br>Phases Required"]
+    
+    %% Creative Phase Selection
+    IdentifyPhases --> SelectPhase["Select Next<br>Creative Phase"]
+    SelectPhase --> PhaseType{"Creative<br>Phase Type?"}
+    
+    %% Creative Phase Types
+    PhaseType -->|"UI/UX<br>Design"| UIPhase["UI/UX CREATIVE PHASE<br>Core/creative-phase-uiux.md"]
+    PhaseType -->|"Architecture<br>Design"| ArchPhase["ARCHITECTURE CREATIVE PHASE<br>Core/creative-phase-architecture.md"]
+    PhaseType -->|"Data Model<br>Design"| DataPhase["DATA MODEL CREATIVE PHASE<br>Core/creative-phase-data.md"]
+    PhaseType -->|"Algorithm<br>Design"| AlgoPhase["ALGORITHM CREATIVE PHASE<br>Core/creative-phase-algorithm.md"]
+    
+    %% UI/UX Creative Phase
+    UIPhase --> UI_Problem["Define UI/UX<br>Problem"]
+    UI_Problem --> UI_Research["Research UI<br>Patterns"]
+    UI_Research --> UI_Options["Explore UI<br>Options"]
+    UI_Options --> UI_Evaluate["Evaluate User<br>Experience"]
+    UI_Evaluate --> UI_Decision["Make Design<br>Decision"]
+    UI_Decision --> UI_Document["Document UI<br>Design"]
+    
+    %% Architecture Creative Phase
+    ArchPhase --> Arch_Problem["Define Architecture<br>Challenge"]
+    Arch_Problem --> Arch_Options["Explore Architecture<br>Options"]
+    Arch_Options --> Arch_Analyze["Analyze Tradeoffs"]
+    Arch_Analyze --> Arch_Decision["Make Architecture<br>Decision"]
+    Arch_Decision --> Arch_Document["Document<br>Architecture"]
+    Arch_Document --> Arch_Diagram["Create Architecture<br>Diagram"]
+    
+    %% Data Model Creative Phase
+    DataPhase --> Data_Requirements["Define Data<br>Requirements"]
+    Data_Requirements --> Data_Structure["Design Data<br>Structure"]
+    Data_Structure --> Data_Relations["Define<br>Relationships"]
+    Data_Relations --> Data_Validation["Design<br>Validation"]
+    Data_Validation --> Data_Document["Document<br>Data Model"]
+    
+    %% Algorithm Creative Phase
+    AlgoPhase --> Algo_Problem["Define Algorithm<br>Problem"]
+    Algo_Problem --> Algo_Options["Explore Algorithm<br>Approaches"]
+    Algo_Options --> Algo_Evaluate["Evaluate Time/Space<br>Complexity"]
+    Algo_Evaluate --> Algo_Decision["Make Algorithm<br>Decision"]
+    Algo_Decision --> Algo_Document["Document<br>Algorithm"]
+    
+    %% Documentation & Completion
+    UI_Document & Arch_Diagram & Data_Document & Algo_Document --> CreateDoc["Create Creative<br>Phase Document"]
+    CreateDoc --> UpdateTasks["Update tasks.md<br>with Decision"]
+    UpdateTasks --> MorePhases{"More Creative<br>Phases?"}
+    MorePhases -->|"Yes"| SelectPhase
+    MorePhases -->|"No"| VerifyComplete["Verify All<br>Phases Complete"]
+    VerifyComplete --> NotifyComplete["Signal Creative<br>Phases Complete"]
 ```
 
 ## 📋 CREATIVE PHASE DOCUMENT FORMAT
@@ -83,14 +120,20 @@ graph TD
     end
 ```
 
-## 📊 REQUIRED FILE STATE VERIFICATION (Adapted)
-*   **Instruction for AI**: Verification should focus on:
-    1.  `activeProjectContext` is selected.
-    2.  `tasks.md` exists and is readable.
-    3.  A task (`selectedTaskLine` from `tasks.md`) is chosen for creative work, belonging to `activeProjectContext`.
-    4.  Jira issue ID (`selectedJiraIssueKey`) is parsed from `selectedTaskLine`.
-    5.  Relevant planning docs exist if complexity implies.
-    6.  Jira issue `selectedJiraIssueKey` is in a state ready for creative work (e.g., status from `activeProjectContext.jira_status_mapping.PLAN` or `CREATIVE` itself).
+## 📊 REQUIRED FILE STATE VERIFICATION
+
+Before creative phase work can begin, verify file state:
+
+```mermaid
+graph TD
+    Start["File State<br>Verification"] --> CheckTasks{"tasks.md has<br>planning complete?"}
+    
+    CheckTasks -->|"No"| ErrorPlan["ERROR:<br>Return to PLAN Mode"]
+    CheckTasks -->|"Yes"| CheckCreative{"Creative phases<br>identified?"}
+    
+    CheckCreative -->|"No"| ErrorCreative["ERROR:<br>Return to PLAN Mode"]
+    CheckCreative -->|"Yes"| ReadyCreative["Ready for<br>Creative Phase"]
+```
 
 ## 📋 OPTIONS ANALYSIS TEMPLATE
 
@@ -149,149 +192,33 @@ Use these visual markers for creative phases:
 🎨🎨🎨 EXITING CREATIVE PHASE - DECISION MADE 🎨🎨🎨
 ```
 
-## 📊 CREATIVE PHASE VERIFICATION CHECKLIST (Adapted)
-*   **Instruction for AI**: Checklist should verify:
-    1.  Creative work for `selectedJiraIssueKey` (in `activeProjectContext.context_name`) is complete.
-    2.  Design decisions documented (e.g., in `creative-docs/creative-[selectedJiraIssueKey].md`).
-    3.  `tasks.md` entry for `selectedJiraIssueKey` is updated to reflect creative phase completion (e.g., a specific status marker or updated description).
-    4.  Jira task `selectedJiraIssueKey` status updated (e.g., to `activeProjectContext.jira_status_mapping.CREATIVE` if it was in PLAN, or ready for IMPLEMENT).
+## 📊 CREATIVE PHASE VERIFICATION CHECKLIST
 
-## 🔄 MODE TRANSITION NOTIFICATION (Adapted)
-*   **Instruction for AI**: Notification should confirm creative phase completion for `selectedJiraIssueKey` (context '[activeProjectContext.context_name]'), mention `tasks.md` and Jira updates, and suggest IMPLEMENT mode.
+```
+✓ CREATIVE PHASE VERIFICATION
+- Problem clearly defined? [YES/NO]
+- Multiple options considered (3+)? [YES/NO]
+- Pros/cons documented for each option? [YES/NO]
+- Decision made with clear rationale? [YES/NO]
+- Implementation plan included? [YES/NO]
+- Visualization/diagrams created? [YES/NO]
+- tasks.md updated with decision? [YES/NO]
 
-## 🎨 DETAILED CREATIVE WORKFLOW STEPS
+→ If all YES: Creative phase complete
+→ If any NO: Complete missing elements
+```
 
-### Step 0.1: Read Global Configs
-*   **Action**: Read `integration_config.md` for `Project Contexts`, global settings, `tasks.md` format.
+## 🔄 MODE TRANSITION NOTIFICATION
 
-### Step 0.2: Select Active Project Context
-*   **Action**: (As defined previously - user selects `activeProjectContext`).
-*   **Action**: Store `selectedJiraProjectKey = activeProjectContext.jira_project_key`, `selectedJiraStatusMapping = activeProjectContext.jira_status_mapping`, `selectedContextName = activeProjectContext.context_name`.
+When all creative phases are complete, notify user with:
 
-### Step 1: Auto-Sync tasks.md with Jira (all contexts)
-*   **Action**: (As defined in `implement-mode-map.mdc` - read `tasks.md`, parse details, check Jira, propose `tasks.md` updates for completed tasks).
-*   **Report**: "`tasks.md` sync check complete."
+```
+## CREATIVE PHASES COMPLETE
 
-### Step 2: Select Task from tasks.md for Creative Work (filtered by active context)
-*   **Action**: Read `tasks.md`. Filter tasks by `(Context: [selectedContextName])` and not done status `[ ]`.
-*   **Action**: Ask user: "Select a task for creative work (context '[selectedContextName]') or provide Jira Issue Key ([selectedJiraProjectKey]-XXX):\n[Filtered list]"
-*   **Condition**: If user selects line: Store `selectedTaskLine`. Parse `selectedJiraIssueKey`, `taskTitle`.
-*   **Condition**: If user provides Jira Key: Verify, store `selectedJiraIssueKey`. Try to find in `tasks.md` for `selectedTaskLine`. Fetch title from Jira.
-*   **Error Handling**: If no task, stop.
-*   **Report**: "Creative work for: [selectedJiraIssueKey] - [taskTitle] (context '[selectedContextName]')."
+✅ All required design decisions made
+✅ Creative phase documents created
+✅ tasks.md updated with decisions
+✅ Implementation plan updated
 
-### Step 3: Check Jira Status/Assignee & Propose Updates (for selected task in its context)
-*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey`.
-*   **Action**: Let `creativeReadyStatus = selectedJiraStatusMapping.PLAN` (or a specific "Ready for Creative" status).
-*   **Action**: Let `creativeStatus = selectedJiraStatusMapping.CREATIVE` (e.g., "To Do" or "Design").
-*   **Action**: Let `implementStatus = selectedJiraStatusMapping.IMPLEMENT`.
-*   **Condition**: If current Jira status is `implementStatus` (or beyond): Report warning or STOP if assignee mismatch, as creative phase is likely complete or skipped.
-*   **Condition**: If current Jira status is NOT `creativeStatus`: Propose `mcp_mcp-atlassian_jira_transition_issue` to `creativeStatus`.
-*   **Condition**: If assignee is NOT `currentUser()`: Propose update to `currentUser()`.
-*   **Action**: Wait for approval. If changes made, set `jiraStatusOrAssigneeChanged = true`.
-
-### Step 3.1: Update `tasks.md` with Jira Status/Assignee
-*   **Condition**: If `jiraStatusOrAssigneeChanged` is true AND `selectedTaskLine` is not null:
-    *   **Action**: Propose `edit_file` for `tasks.md` to update `selectedTaskLine` (e.g., ensure status checkbox `[ ]` is accurate, no specific assignee update needed in `tasks.md` string usually).
-*   **Condition**: If `selectedTaskLine` is null (Jira key manually entered):
-    *   **Action**: Formulate new task line for `tasks.md` (Key, Title, SP from Jira desc, context `selectedContextName`).
-    *   **Action**: Propose `edit_file` to append to `tasks.md`.
-*   **Report**: "`tasks.md` and Jira task [selectedJiraIssueKey] are aligned for creative work."
-
-### Step 4: Check/Propose Git Branch for Task (considering Epic branch)
-*   **Action**: Fetch parent Epic key for `selectedJiraIssueKey`. Let this be `parentEpicKey` (can be null).
-*   **Action**: Let `defaultGitBranch = activeProjectContext.gitlab_default_branch`.
-*   **Action**: Initialize `baseBranch = defaultGitBranch`.
-*   **Condition**: If `parentEpicKey` is not null:
-    *   **Action**: Let `epicBranchName = "epic/[parentEpicKey]"`.
-    *   **Action**: (Optional - Advanced: Use `git branch -r --list origin/[epicBranchName]` or similar to check if remote epic branch exists. For simplicity, we can assume if an epic branch was created in PLAN, it might exist locally if user pulled, or we just attempt to base off it. A simpler approach is to always ask user if they know of an epic branch).
-    *   **Action**: Ask user: "Is task [selectedJiraIssueKey] part of Epic [parentEpicKey]? And does a Git branch '[epicBranchName]' already exist for this Epic? If yes, we can base the new task branch on it."
-    *   **Condition**: If user confirms `epicBranchName` exists and should be used:
-        *   Set `baseBranch = epicBranchName`.
-        *   **Action**: (Optional: Propose `git checkout [epicBranchName]` and `git pull` to ensure it's up-to-date if user isn't already on it).
-*   **Action**: Let `featureBranchName = "feature/[selectedJiraIssueKey]-creative"`.
-*   **Action**: Ask user: "It is recommended to work in a dedicated Git branch. Propose creating/switching to branch '[featureBranchName]' from '[baseBranch]'?"
-*   **Condition**: If user agrees:
-    *   **Action**: Propose `run_terminal_cmd` with `git checkout -b [featureBranchName] [baseBranch]`.
-    *   **(Error Handling Note for AI)**: If `baseBranch` (especially an epic branch) doesn't exist locally, `git checkout -b` will fail if `baseBranch` is not `defaultGitBranch`. The AI should handle this, perhaps by falling back to `defaultGitBranch` or asking the user to create/pull the epic branch first.
-    *   **Action**: Wait for approval.
-*   **Report**: "Git branch '[featureBranchName]' proposed/created from '[baseBranch]'."
-
-### Step 4.1: AI Task Validation
-*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: description, labels).
-*   **Action**: Let `currentLabels = result.labels`, `currentDescription = result.description`.
-*   **Action**: Let `hasAILabels = ("created-by-ai" in currentLabels OR "edited-by-ai" in currentLabels)`.
-*   **Action**: Let `hasAIText = ("создана с помощью ИИ" in currentDescription OR "отредактирована с помощью ИИ" in currentDescription)`.
-*   **Condition**: If NOT `hasAILabels` AND NOT `hasAIText`:
-    *   **Action**: Analyze task for creative design requirements.
-    *   **Action**: Present interpretation focusing on design aspects:
-        ```
-        🤖 СОГЛАСОВАНИЕ ЗАДАЧИ [selectedJiraIssueKey] (CREATIVE MODE)
-        
-        📋 МОЯ ИНТЕРПРЕТАЦИЯ:
-        Суть задачи: [design-focused understanding]
-        Дизайн-требования: [UI/UX, Architecture, Algorithm needs]
-        Ожидаемые решения: [design deliverables]
-        Сложность дизайна: [Level 1-4 with design reasoning]
-        
-        ✅ Подтверждаете понимание дизайн-задач?
-        📝 Нужны уточнения в требованиях к дизайну?
-        🎯 Согласны с оценкой сложности дизайна?
-        ```
-    *   **Action**: Wait for user confirmation and handle design clarifications.
-    *   **Condition**: If user requests changes:
-        *   Update task description with design clarifications.
-        *   Add `edited-by-ai` label and "Примечание: Задача отредактирована с помощью ИИ." note.
-    *   **Action**: Estimate Story Points considering design complexity.
-    *   **Action**: Add appropriate AI labels if not already present.
-*   **Report**: "AI метки для задачи [selectedJiraIssueKey] проверены. Готов к творческой фазе."
-
-### Step 5: Execute Creative Design Process (for selected Jira task)
-*   **Instruction (Prompt for LLM)**: "You are in CREATIVE mode for task '[selectedJiraIssueKey] - [taskTitle]' (Project Context: '[selectedContextName]', Jira Project: '[selectedJiraProjectKey]'). Current Git branch: '[currentGitBranch]'. Review linked planning documents. Guide through UI/UX, Architecture, Data Model, or Algorithm design. Document options, pros/cons, decisions, and implementation notes in 'creative-docs/creative-[selectedJiraIssueKey]-[TYPE].md'. Use Creative Phase Markers."
-*   **(Iterative AI-User Interaction for Design)**
-    *   User specifies creative type (UI/UX, Arch, Data, Algo).
-    *   AI guides user through structured design (problem, options, pros/cons, decision, plan).
-    *   AI uses `edit_file` to create/update `creative-docs/creative-[selectedJiraIssueKey]-[TYPE].md`.
-    *   AI uses `run_terminal_cmd` for any relevant helper commands (e.g., diagram generation if tools allow).
-    *   Creative work is documented iteratively for `selectedJiraIssueKey`.
-
-### Step 5.0.1: (Optional) Update Jira Task Description (AI Assisted)
-*   **Condition**: If user requests to update the Jira task description for `selectedJiraIssueKey`:
-    *   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: description). Let `currentDescription` be the result.
-    *   **Action**: Ask user: "Какое новое описание вы хотите установить для задачи [selectedJiraIssueKey]?"
-    *   **Action**: Let `newDescriptionFromUser` be the user's input.
-    *   **Action**: Let `finalDescription = newDescriptionFromUser`.
-    *   **Action**: Let `aiCreatedNote = "Примечание: Задача создана с помощью ИИ."`.
-    *   **Action**: Let `aiEditedNote = "\\n\\nПримечание: Задача отредактирована с помощью ИИ."`.
-*   **Action**: Let `aiEditedLabel = "edited-by-ai"`.
-*   **Condition**: If `currentDescription` does NOT contain `aiCreatedNote`:
-    *   `finalDescription = finalDescription + aiEditedNote`.
-*   **Action**: Let `updatedLabels = currentLabels + [aiEditedLabel]` (if not already present).
-    *   **Action**: Ask user: "Готовы обновить описание задачи [selectedJiraIssueKey] в Jira на следующее:\\n[finalDescription]\\n?"
-    *   **Condition**: If user agrees:
-        *   Let `jiraComponent = activeProjectContext.jira_component`.
-        *   Let `shouldSetComponent = (jiraComponent != "NO_NAME")`.
-        *   **Condition**: If `shouldSetComponent`:
-            *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`, components `[jiraComponent]`).
-        *   **Condition**: Else:
-            *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`).
-        *   **Report**: "Описание и метки задачи [selectedJiraIssueKey] обновлены в Jira."
-    *   **Condition**: If user disagrees:
-        *   **Report**: "Обновление описания отменено."
-
-### Step 5.1: Update tasks.md with Creative Phase Progress/Completion
-*   **Action**: After creative work (e.g., design document `creative-[selectedJiraIssueKey].md` is created/updated):
-    *   **Action**: Propose `edit_file` for `tasks.md` to update `selectedTaskLine`. This might involve:
-        *   Adding a note like "- Creative Design Complete" to the task description part of the string.
-        *   Ensuring the status checkbox `[ ]` is still appropriate (task is not done yet, but ready for impl).
-    *   **Report**: "`tasks.md` updated to reflect creative phase completion for [selectedJiraIssueKey]."
-
-### Step 6: Suggest Next Mode (IMPLEMENT)
-*   **Action**: Update `activeContext.md` (if used) with `selectedJiraIssueKey` and link to creative docs.
-*   **Reminder**: "If significant architectural decisions for [selectedJiraIssueKey] (context '[selectedContextName]') were made, update `/docs/architecture.md`."
-*   **Report**: "Creative design for [selectedJiraIssueKey] complete. Recommended next: IMPLEMENT Mode."
-
-### Step 7: CREATIVE Mode End
-*   Wait for user command.
-
-*Note for AI: Remember MCP error handling and temp file deletion.* 
+→ NEXT RECOMMENDED MODE: IMPLEMENT MODE
+``` 

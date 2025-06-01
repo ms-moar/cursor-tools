@@ -195,4 +195,89 @@ foreach ($file in $templates.Keys) {
 - All components verified
 
 Memory Bank system ready for use.
-``` 
+```
+
+## 🛡️ FILE INTEGRITY AND SYNTAX VALIDATION SYSTEM
+
+> **TL;DR:** This system provides mechanisms for verifying file integrity using SHA-256 checksums and validating syntax for supported file types to ensure robustness and prevent errors.
+
+### 1. File Integrity Check (SHA-256)
+
+To ensure files have not been corrupted or unintentionally altered, SHA-256 checksums can be used. This is particularly useful for critical configuration files or when transferring files between systems.
+
+**Procedure:**
+
+1.  **Generate Checksum (Hypothetical Tool: `mcp_generate_checksum`):**
+    *   Input: `target_file` (string)
+    *   Output: `sha256_checksum` (string)
+    *   Example: `mcp_generate_checksum --file "memory-bank/projectbrief.md"` might return `"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"`.
+
+2.  **Store Checksum:**
+    *   Checksums for critical files can be stored in a dedicated manifest file (e.g., `memory-bank/checksums.sha256`) or within `activeContext.md` if relevant to the current task.
+    *   Format for `checksums.sha256`:
+        ```
+        <checksum>  <filepath>
+        e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  memory-bank/projectbrief.md
+        a1b2c3d4...  .cursor/rules/main.mdc
+        ```
+
+3.  **Verify Checksum (Hypothetical Tool: `mcp_verify_checksum`):**
+    *   Input: `target_file` (string), `expected_checksum` (string)
+    *   Output: `is_valid` (boolean), `message` (string)
+    *   Example: `mcp_verify_checksum --file "memory-bank/projectbrief.md" --checksum "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"`.
+
+**Workflow:**
+```mermaid
+graph TD
+    StartVerify["Start File Integrity Check<br>For critical file (e.g., config.json)"] --> GetStoredCS["1. Retrieve Stored Checksum<br>From checksums.sha256 or activeContext.md"]
+    GetStoredCS --> GenerateNewCS["2. Generate Current Checksum<br>For target_file (using mcp_generate_checksum)"]
+    GenerateNewCS --> CompareCS{"3. Compare Checksums"}
+    CompareCS -- Match --> Valid["File Integrity VERIFIED<br>Checksums Match"]
+    CompareCS -- Mismatch --> Invalid["File Integrity FAILED<br>Checksums Mismatch!"]
+    Invalid --> AlertUser["4. Alert User & Log Discrepancy<br>Suggest checking file for unintended changes."]
+    Valid --> ProceedOp["Proceed with Operation Involving File"]
+    AlertUser --> HaltOp["Halt Operation or Proceed with Caution<br>(Based on user confirmation)"]
+
+    style Invalid fill:#ffcccc,stroke:#cc0000
+    style Valid fill:#ccffcc,stroke:#009900
+```
+*   **When to Use**: Before loading critical configurations, after file transfers, or periodically for key Memory Bank files.
+
+### 2. File Syntax Validation
+
+To prevent errors caused by malformed files, syntax validation should be performed for supported file types before they are processed or used by the system.
+
+**Supported File Types & Validation Methods (Illustrative):**
+
+*   **JSON (`*.json`):**
+    *   **Method**: Attempt to parse with a standard JSON parser. (e.g., `json.loads()` in Python if `run_code` is available, or a hypothetical `mcp_validate_json --file "path/to/file.json"`).
+    *   **Output**: `is_valid` (boolean), `error_message` (string, if invalid).
+*   **YAML (`*.yaml`, `*.yml`):**
+    *   **Method**: Attempt to parse with a standard YAML parser. (e.g., using a YAML library in `run_code` or a hypothetical `mcp_validate_yaml --file "path/to/file.yaml"`).
+    *   **Output**: `is_valid` (boolean), `error_message` (string, if invalid).
+*   **Markdown (`*.md`, `*.mdc`):**
+    *   **Method**: Check for common structural issues or use a linter if available (e.g., `mcp_lint_markdown --file "path/to/file.md"`). For `.mdc` files, verify Mermaid diagram syntax if identifiable blocks are present.
+    *   **Output**: `is_valid` (boolean), `lint_issues` (list/string, if any).
+*   **Shell Scripts (`*.sh`, `*.ps1`):**
+    *   **Method**: Use `shellcheck` for `.sh` or `PSScriptAnalyzer` for `.ps1` if available via `run_terminal_cmd`, or a hypothetical `mcp_validate_script --file "path/to/script.sh" --type "bash"`.
+    *   **Output**: `is_valid` (boolean), `analyzer_output` (string).
+
+**Workflow:**
+```mermaid
+graph TD
+    FileOp["File Operation Involving<br>Supported File Type (e.g., load config.json)"] --> GetFileType["1. Determine File Type<br>Based on extension"]
+    GetFileType --> IsSupported{"2. Syntax Validation<br>Supported for this type?"}
+    IsSupported -- No --> ProceedNoVal["Proceed without Syntax Validation<br>(Log as Not Supported)"]
+    IsSupported -- Yes --> PerformVal["3. Perform Syntax Validation<br>(Using appropriate tool/method)"]
+    PerformVal --> CheckValResult{"4. Validation Result?"}
+    CheckValResult -- Valid --> ValidSyntax["Syntax VERIFIED"]
+    CheckValResult -- Invalid --> InvalidSyntax["Syntax FAILED<br>Error: [error_message]"]
+    InvalidSyntax --> AlertUserSyntax["5. Alert User & Log Error<br>Provide error details for correction."]
+    ValidSyntax --> ProceedWithFile["Proceed with Using the File"]
+    AlertUserSyntax --> HaltFileUse["Halt File Usage or Attempt Auto-Correction<br>(If safe and feasible, with user confirmation)"]
+
+    style InvalidSyntax fill:#ffcccc,stroke:#cc0000
+    style ValidSyntax fill:#ccffcc,stroke:#009900
+```
+*   **Before Use**: Perform validation *before* the file's content is critically relied upon (e.g., before parsing a config file that dictates system behavior).
+*   **Error Reporting**: Provide clear, actionable error messages to the user if validation fails. If possible, include line numbers or specific syntax issues. 

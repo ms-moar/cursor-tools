@@ -284,11 +284,21 @@ When the build is complete, notify user with:
 
 ### Step 1: Auto-Sync tasks.md with Jira (for all contexts)
 *   **Action**: Read `tasks.md` line by line.
-    *   For each line, parse `JIRA_PROJECT_KEY_FROM_TASK`, `JIRA_ISSUE_ID_FROM_TASK`, `CONTEXT_NAME_FROM_TASK` and current local status checkbox `[ ]` or `[x]`.
-    *   Find the corresponding `Project Context` in `integration_config.md` using `CONTEXT_NAME_FROM_TASK` or `JIRA_PROJECT_KEY_FROM_TASK`.
-    *   If context found, call `mcp_mcp-atlassian_jira_get_issue` for `JIRA_ISSUE_ID_FROM_TASK` in its specific project to get its current status in Jira.
-    *   Compare Jira status with local status. If Jira status indicates completion (e.g., matches a "Done" or "Closed" status in the task's context `jira_status_mapping`) and local is `[ ]`, propose `edit_file` for `tasks.md` to mark it `[x]`.
-*   **Report**: "`tasks.md` sync check complete. Proposed updates if any."
+    *   For each line, parse `JIRA_PROJECT_KEY_FROM_TASK`, `JIRA_ISSUE_ID_FROM_TASK`, `CONTEXT_NAME_FROM_TASK`, current local status checkbox `[ ]` or `[x]`, and current local Story Points (e.g., from `SP_VALUE=[X]`).
+    *   Find the corresponding `Project Context` in `integration_config.md` using `CONTEXT_NAME_FROM_TASK` or `JIRA_PROJECT_KEY_FROM_TASK`. Let this be `taskSpecificContext`.
+    *   If `taskSpecificContext` found:
+        *   Let `fieldsToFetch = ["status"]`.
+        *   If `taskSpecificContext.jira_sp_field_id` is defined, add `taskSpecificContext.jira_sp_field_id` to `fieldsToFetch`.
+        *   Call `mcp_mcp-atlassian_jira_get_issue` for `JIRA_ISSUE_ID_FROM_TASK` in its specific project, requesting `fieldsToFetch`.
+        *   Let `jiraStatus = result.status.name` (or ID).
+        *   Let `jiraSpValue = result.fields[taskSpecificContext.jira_sp_field_id]` if present and `jira_sp_field_id` was fetched.
+        *   Let `lineToUpdate = false` and `updatedLineContent = original_line_from_tasks_md`.
+        *   If Jira status indicates completion (e.g., matches a "Done" or "Closed" status in `taskSpecificContext.jira_status_mapping`) and local status is `[ ]`:
+            *   Mark task for update to `[x]` in `updatedLineContent`. Set `lineToUpdate = true`.
+        *   If `jiraSpValue` is available and different from local Story Points (or local SP is missing):
+            *   Update `updatedLineContent` to include/replace the SP part (e.g., `SP_VALUE=[jiraSpValue]`). Ensure format matches `integration_config.md`. Set `lineToUpdate = true`.
+        *   If `lineToUpdate` is true, propose `edit_file` for `tasks.md` to replace the original line with `updatedLineContent`.
+*   **Report**: "`tasks.md` sync check complete. Proposed updates if any, including SP values."
 
 ### Step 2: Select Task from tasks.md for Implementation (filtered by active context)
 *   **Action**: Read `tasks.md`.
@@ -305,27 +315,77 @@ When the build is complete, notify user with:
 *   **Report**: "Implementing: [selectedJiraIssueKey] - [taskTitle] for context '[selectedContextName]'."
 
 ### Step 3: Check Jira Status/Assignee & Propose Updates (for selected task in its context)
-*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: status, assignee).
-*   **Action**: Let `implementStatus = selectedJiraStatusMapping.IMPLEMENT` (e.g., "In Progress") for the `activeProjectContext`.
-*   **Condition**: If current Jira status is `implementStatus` AND assignee is NOT `currentUser()`: STOP (Conflict).
-*   **Condition**: If current Jira status is NOT `implementStatus`: Propose `mcp_mcp-atlassian_jira_transition_issue` to `implementStatus`.
-*   **Condition**: If current Jira assignee is NOT `currentUser()`: 
-    *   Let `jiraComponent = activeProjectContext.jira_component`.
-    *   Let `shouldSetComponent = (jiraComponent != "NO_NAME")`.
-    *   **Condition**: If `shouldSetComponent`:
-        *   Propose `mcp_mcp-atlassian_jira_update_issue` to assign to `currentUser()` and set component to `jiraComponent`.
-    *   **Condition**: Else:
-        *   Propose `mcp_mcp-atlassian_jira_update_issue` to assign to `currentUser()`.
-*   **Action**: Wait for approval. If changes made, set `jiraStatusChanged = true`.
+*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: status, assignee, labels, description). Let `currentJiraStatus = result.status.name`, `currentJiraStatusId = result.status.id`, `currentAssignee = result.assignee`, `currentLabels = result.labels`, `currentDescription = result.description`.
+*   **Action**: Let `implementTargetStatusMapping = selectedJiraStatusMapping.IMPLEMENT` (this should contain `target_status_name`, `target_status_id`, and `allowed_from_statuses_names` or `allowed_from_statuses_ids` for the `activeProjectContext`).
+*   **Action**: Let `targetImplementStatusName = implementTargetStatusMapping.target_status_name`.
+*   **Action**: Let `targetImplementStatusId = implementTargetStatusMapping.target_status_id`.
+*   **Action**: Let `allowedFromImplement = implementTargetStatusMapping.allowed_from_statuses_names` (or `allowed_from_statuses_ids`).
+
+*   **Condition**: If `currentJiraStatus` is `targetImplementStatusName` (or `currentJiraStatusId` is `targetImplementStatusId`) AND `currentAssignee` is NOT `currentUser()`:
+    *   **Report**: "STOP: Task [selectedJiraIssueKey] is already in '[targetImplementStatusName]' but assigned to [currentAssignee]. Please reassign or pick another task."
+    *   **Action**: End IMPLEMENT mode or return to task selection.
+
+*   **Condition**: If `currentJiraStatus` is NOT `targetImplementStatusName` (or `currentJiraStatusId` is NOT `targetImplementStatusId`):
+    *   **Condition**: If `currentJiraStatus` is NOT in `allowedFromImplement` (check by name or ID):
+        *   **Report**: "WARNING: Current Jira status '[currentJiraStatus]' for [selectedJiraIssueKey] is not in the allowed list to transition to '[targetImplementStatusName]' ([allowedFromImplement]). Manual Jira status update might be needed first or an intermediate transition."
+        *   **Action**: Ask user if they want to proceed with attempting the transition to `targetImplementStatusId` or `targetImplementStatusName` anyway, or handle it manually.
+    *   **Action**: (If proceeding) Propose `mcp_mcp-atlassian_jira_transition_issue` for `selectedJiraIssueKey` to `targetImplementStatusId` (preferable) or `targetImplementStatusName`.
+    *   **Action**: If transition successful, set `jiraStatusChanged = true`.
+
+*   **Condition**: If `currentAssignee` is NOT `currentUser()`:
+    *   Propose `mcp_mcp-atlassian_jira_assign_issue` for `selectedJiraIssueKey` to `currentUser()`.
+    *   **Action**: If assignment successful, set `jiraStatusChanged = true` (or a more specific flag like `assigneeChanged = true`).
+
+*   **(DEPRECATED - Handled by mcp_mcp-atlassian_jira_assign_issue and specific component update logic if needed elsewhere)**
+    *   ~~Let `jiraComponent = activeProjectContext.jira_component`.~~
+    *   ~~Let `shouldSetComponent = (jiraComponent != "NO_NAME")`.~~
+    *   ~~**Condition**: If `shouldSetComponent`: Propose `mcp_mcp-atlassian_jira_update_issue` to assign to `currentUser()` and set component to `jiraComponent`.~~
+    *   ~~**Condition**: Else: Propose `mcp_mcp-atlassian_jira_update_issue` to assign to `currentUser()`.~~
+
+*   **Action**: Wait for approval for any proposed Jira changes. If changes made, set `jiraStatusOrAssigneeChangedThisStep = true`.
 
 ### Step 3.1: Update `tasks.md` with Jira Status/Assignee
-*   **Condition**: If `jiraStatusChanged` is true AND `selectedTaskLine` is not null:
-    *   **Action**: Propose `edit_file` for `tasks.md` to update the status part (e.g., if it was `[ ]` and task is now In Progress, it remains `[ ]`, but ensure consistency) of `selectedTaskLine`. (Assignee is not typically in `tasks.md` line, but Jira status might imply it's no longer just 'To Do').
-    *   **Report**: "`tasks.md` updated to reflect current Jira status for [selectedJiraIssueKey]."
+*   **Condition**: If `jiraStatusOrAssigneeChangedThisStep` is true AND `selectedTaskLine` is not null:
+    *   **Action**: Propose `edit_file` for `tasks.md` to update `selectedTaskLine`. The status checkbox `[ ]` or `[x]` should primarily reflect if the task is considered *locally* started/done. Jira status changes might not directly flip this checkbox unless it moves to a final completed state. The description part of the task line in `tasks.md` can be appended with `(Jira: [currentJiraStatus])` if desired for clarity.
+    *   **Report**: "`tasks.md` checked/updated to reflect current Jira status/assignee for [selectedJiraIssueKey]."
 *   **Condition**: If `selectedTaskLine` is null (Jira key entered manually, not in `tasks.md` yet):
-    *   **Action**: Formulate new task line for `tasks.md` using details from Jira (Key, Title, SP from description, context `selectedContextName`).
+    *   **Action**: Formulate new task line for `tasks.md` using details from Jira (Key, Title, SP from Jira description if available, current Jira status, context `selectedContextName`).
     *   **Action**: Propose `edit_file` to append this new line to `tasks.md`.
     *   **Report**: "[selectedJiraIssueKey] added to `tasks.md`."
+
+### Step 3.2: AI Task Validation (Moved from Step 4.1)
+*   **Action**: (If not already validated - check for `created-by-ai` or `edited-by-ai` labels in `currentLabels` or similar markers in `currentDescription`)
+*   **Action**: Let `hasAILabels = ("created-by-ai" in currentLabels OR "edited-by-ai" in currentLabels)`.
+*   **Action**: Let `hasAIText = ("создана с помощью ИИ" in currentDescription OR "отредактирована с помощью ИИ" in currentDescription)`.
+*   **Condition**: If NOT `hasAILabels` AND NOT `hasAIText`:
+    *   **Action**: Analyze task `selectedJiraIssueKey` based on its `currentDescription` for implementation requirements.
+    *   **Action**: Present interpretation focusing on implementation aspects:
+        ```
+        🤖 СОГЛАСОВАНИЕ ЗАДАЧИ [selectedJiraIssueKey] (IMPLEMENT MODE - Initial Validation)
+        
+        📋 МОЯ ИНТЕРПРЕТАЦИЯ НА ОСНОВЕ ОПИСАНИЯ ИЗ JIRA:
+        Суть задачи: [implementation-focused understanding from currentDescription]
+        Технические требования: [code, tests, documentation needs from currentDescription]
+        Ожидаемая реализация: [implementation deliverables from currentDescription]
+        Сложность реализации: [Level 1-4 with technical reasoning based on currentDescription]
+        
+        ✅ Подтверждаете понимание технических требований?
+        📝 Нужны уточнения в спецификации реализации (будет обновлено в Jira)?
+        🎯 Согласны с оценкой технической сложности?
+        ```
+    *   **Action**: Wait for user confirmation.
+    *   **Condition**: If user requests changes to the understanding or specification:
+        *   **Action**: Solicit refined details from the user for the Jira description.
+        *   **Action**: Let `refinedDescription = user_provided_details`.
+        *   **Action**: Let `aiEditedNoteForValidation = "\\n\\nПримечание: Описание уточнено ИИ в процессе валидации перед имплементацией."`.
+        *   Let `descriptionForUpdate = (activeProjectContext.jira_description_prefix || "") + refinedDescription + (activeProjectContext.jira_description_suffix || "") + aiEditedNoteForValidation`.
+        *   Let `labelsForUpdate = currentLabels`. If `"edited-by-ai"` not in `labelsForUpdate`, add it. If `activeProjectContext.jira_default_labels` AND `activeProjectContext.jira_default_labels.task` exists, ensure they are in `labelsForUpdate`.
+        *   Let `customFieldsForUpdate = {}`.
+        *   Ask user: "Обновить описание и метки задачи [selectedJiraIssueKey] в Jira на основе этих уточнений?"
+        *   If user agrees: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (description `descriptionForUpdate`, labels `labelsForUpdate`). Update `currentDescription` and `currentLabels` with new values.
+        *   Report success/failure of update.
+    *   **Action**: (If complexity changed and SP re-estimation is needed based on `atlassian-integration.mdc` logic) Propose SP update in Jira using `mcp_mcp-atlassian_jira_update_issue` with the `activeProjectContext.jira_sp_field_id`.
+*   **Report**: "AI валидация задачи [selectedJiraIssueKey] завершена. Готов к созданию ветки и реализации."
 
 ### Step 4: Propose Git Branch Creation (considering Epic branch, using Jira key)
 *   **Action**: Fetch parent Epic key for `selectedJiraIssueKey`. Let this be `parentEpicKey` (can be null).
@@ -345,35 +405,6 @@ When the build is complete, notify user with:
     *   **Action**: Wait for approval.
 *   **Report**: "Git branch '[featureBranchName]' proposed/created from '[baseBranch]'."
 
-### Step 4.1: AI Task Validation
-*   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: description, labels).
-*   **Action**: Let `currentLabels = result.labels`, `currentDescription = result.description`.
-*   **Action**: Let `hasAILabels = ("created-by-ai" in currentLabels OR "edited-by-ai" in currentLabels)`.
-*   **Action**: Let `hasAIText = ("создана с помощью ИИ" in currentDescription OR "отредактирована с помощью ИИ" in currentDescription)`.
-*   **Condition**: If NOT `hasAILabels` AND NOT `hasAIText`:
-    *   **Action**: Analyze task for implementation requirements.
-    *   **Action**: Present interpretation focusing on implementation aspects:
-        ```
-        🤖 СОГЛАСОВАНИЕ ЗАДАЧИ [selectedJiraIssueKey] (IMPLEMENT MODE)
-        
-        📋 МОЯ ИНТЕРПРЕТАЦИЯ:
-        Суть задачи: [implementation-focused understanding]
-        Технические требования: [code, tests, documentation needs]
-        Ожидаемая реализация: [implementation deliverables]
-        Сложность реализации: [Level 1-4 with technical reasoning]
-        
-        ✅ Подтверждаете понимание технических требований?
-        📝 Нужны уточнения в спецификации реализации?
-        🎯 Согласны с оценкой технической сложности?
-        ```
-    *   **Action**: Wait for user confirmation and handle implementation clarifications.
-    *   **Condition**: If user requests changes:
-        *   Update task description with implementation clarifications.
-        *   Add `edited-by-ai` label and "Примечание: Задача отредактирована с помощью ИИ." note.
-    *   **Action**: Estimate Story Points considering implementation complexity.
-    *   **Action**: Add appropriate AI labels if not already present.
-*   **Report**: "AI метки для задачи [selectedJiraIssueKey] проверены. Готов к реализации."
-
 ### Step 5: Execute Implementation Steps
 *   **Instruction (Prompt for LLM)**: "You are in IMPLEMENT mode for task '[selectedJiraIssueKey] - [taskTitle]' (Project Context: '[selectedContextName]', Jira Project: '[selectedJiraProjectKey]'). The current Git branch is '[currentGitBranch]' (based from '[baseBranch]'). Review linked planning/creative documents: '[planDocPath]', '[creativeDocPath]'. Assist with code generation, debugging, and implementation based on these details. Adhere to coding standards from 'coding_standards.md' and project-specific guidelines from '[activeProjectContext.guidelines_file]'."
 *   **(Iterative AI-User Interaction for Implementation)**
@@ -384,28 +415,45 @@ When the build is complete, notify user with:
     *   Progress is made iteratively on `selectedJiraIssueKey`.
 
 ### Step 5.0.1: (Optional) Update Jira Task Description (AI Assisted)
-*   **Condition**: If user requests to update the Jira task description for `selectedJiraIssueKey`:
-    *   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: description). Let `currentDescription` be the result.
-    *   **Action**: Ask user: "Какое новое описание вы хотите установить для задачи [selectedJiraIssueKey]?"
-    *   **Action**: Let `newDescriptionFromUser` be the user's input.
-    *   **Action**: Let `finalDescription = newDescriptionFromUser`.
+*   **Condition**: If user requests to update the Jira task description for `selectedJiraIssueKey` (e.g., during implementation for clarity, or after a sub-task completion):
+    *   **Action**: Call `mcp_mcp-atlassian_jira_get_issue` for `selectedJiraIssueKey` (fields: description, labels, custom fields if SP re-evaluation is possible). Let `currentDescriptionFromJira = result.description`, `currentLabelsFromJira = result.labels`.
+    *   **Action**: Ask user: "Какое новое описание вы хотите установить для задачи [selectedJiraIssueKey]? Текущее описание:\n[currentDescriptionFromJira]"
+    *   **Action**: Let `newDescriptionFromUser = user's input`.
     *   **Action**: Let `aiCreatedNote = "Примечание: Задача создана с помощью ИИ."`.
-    *   **Action**: Let `aiEditedNote = "\\n\\nПримечание: Задача отредактирована с помощью ИИ."`.
-*   **Action**: Let `aiEditedLabel = "edited-by-ai"`.
-*   **Condition**: If `currentDescription` does NOT contain `aiCreatedNote`:
-    *   `finalDescription = finalDescription + aiEditedNote`.
-*   **Action**: Let `updatedLabels = currentLabels + [aiEditedLabel]` (if not already present).
-    *   **Action**: Ask user: "Готовы обновить описание задачи [selectedJiraIssueKey] в Jira на следующее:\\n[finalDescription]\\n?"
+    *   **Action**: Let `aiEditedNote = "\\n\\nПримечание: Задача отредактирована с помощью ИИ в ходе реализации."`.
+    *   Let `finalDescriptionForUpdate = (activeProjectContext.jira_description_prefix || "") + newDescriptionFromUser + (activeProjectContext.jira_description_suffix || "")`.
+    *   **Condition**: If `currentDescriptionFromJira` does NOT contain `aiCreatedNote` AND `currentDescriptionFromJira` does NOT contain `aiEditedNote` (to avoid duplicate notes if edited multiple times):
+        *   `finalDescriptionForUpdate = finalDescriptionForUpdate + aiEditedNote`.
+    *   Else if `currentDescriptionFromJira` contains `aiCreatedNote` and not `aiEditedNote`:
+        *    `finalDescriptionForUpdate = finalDescriptionForUpdate + aiEditedNote` (replacing implies more complex logic, so append for now or just ensure one AI edit note is present)
+
+    *   Let `labelsPayload = Array.from(new Set([...currentLabelsFromJira, "edited-by-ai", ...((activeProjectContext.jira_default_labels || {}).task || [])]))`.
+
+    *   Let `customFieldsPayloadForUpdate = {}`.
+    *   **Action**: Ask user: "Изменилась ли суть или объем задачи [selectedJiraIssueKey] настолько, что требуется переоценка Story Points? (Текущие SP, если известны: [value from Jira if fetched])".
+    *   **Condition**: If user says yes:
+        *   Ask for new SP value: `newSpValue`.
+        *   If `activeProjectContext.jira_sp_field_id` AND `newSpValue` is valid:
+            *   `customFieldsPayloadForUpdate[activeProjectContext.jira_sp_field_id] = newSpValue`.
+
+    *   **Action**: Ask user: "Нужно ли обновить другие поля Jira для [selectedJiraIssueKey] (например, компонент, другие кастомные поля)?"
+    *   **Condition**: If user says yes:
+        *   // Here, solicit specific field IDs and values from the user, or provide a list based on `activeProjectContext.jira_custom_fields.task`
+        *   Example: User wants to update `activeProjectContext.jira_component` to `new_component`.
+        *   `componentsForUpdate = [new_component]` (if component is handled separately, otherwise add to customFieldsPayload if it's a custom field).
+        *   Example: User wants to update custom field `customfield_XXXXX` to `new_custom_value`.
+        *   `customFieldsPayloadForUpdate["customfield_XXXXX"] = new_custom_value`.
+
+    *   **Action**: Show summary of proposed changes: "Готовы обновить задачу [selectedJiraIssueKey] в Jira:\nОписание:
+[finalDescriptionForUpdate]
+Метки: [labelsPayload]
+Story Points: [newSpValue if changed, else 'не изменены']
+Другие поля: [summary of other changes]"
     *   **Condition**: If user agrees:
-        *   Let `jiraComponent = activeProjectContext.jira_component`.
-        *   Let `shouldSetComponent = (jiraComponent != "NO_NAME")`.
-        *   **Condition**: If `shouldSetComponent`:
-            *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`, components `[jiraComponent]`).
-        *   **Condition**: Else:
-            *   **Action**: Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescription`, labels `updatedLabels`).
-        *   **Report**: "Описание и метки задачи [selectedJiraIssueKey] обновлены в Jira."
+        *   Call `mcp_mcp-atlassian_jira_update_issue` for `selectedJiraIssueKey` (project `selectedJiraProjectKey`, description `finalDescriptionForUpdate`, labels `labelsPayload`, components (if `componentsForUpdate` defined), custom_fields `customFieldsPayloadForUpdate`).
+        *   **Report**: "Задача [selectedJiraIssueKey] обновлена в Jira."
     *   **Condition**: If user disagrees:
-        *   **Report**: "Обновление описания отменено."
+        *   **Report**: "Обновление Jira для [selectedJiraIssueKey] отменено."
 
 ### Step 5.1: Update tasks.md with Implementation Progress
 *   **Action**: After significant sub-steps of implementation, AI can propose updating the description part of `selectedTaskLine` in `tasks.md` to note progress (e.g., appending "- API endpoint created"). This is optional and user-driven.

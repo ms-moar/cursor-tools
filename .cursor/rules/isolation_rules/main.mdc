@@ -167,8 +167,64 @@ This ensures clarity about the context of your operations at all times.
 
 When working with files in the project, the following rules **MUST** be observed by the AI:
 
-1.  **Backup Before Deletion**: Before deleting any file for any reason, its backup copy **MUST** be created in the `backup-files/` folder.
+1.  **Backup Before Deletion or Modification**: Before deleting **OR MODIFYING** any file for any reason, its backup copy **MUST** be created in the `backup-files/` folder.
 2.  **Create Backup Directory**: If the `backup-files/` directory is missing, it **MUST** be created automatically by the AI before attempting to save a backup.
 3.  **Backup File Naming**: The backup file name format **MUST** be: `{original_filename}_{timestamp}.bak`. The timestamp should be in `YYYYMMDDHHMMSS` format (e.g., `myfile.txt_20240515103000.bak`).
 
-These rules are critical for data safety and project integrity. 
+### 1. Automatic Backup Creation Procedure
+
+The AI **MUST** follow this procedure for backups:
+
+```mermaid
+graph TD
+    StartBackup["File Operation Requested<br>(Delete/Modify)"] -->
+    CheckBackupDir{"`backup-files/`<br>Exists?"}
+    CheckBackupDir -- No --> CreateBackupDir["Create `backup-files/`"]
+    CreateBackupDir --> GenerateName["Generate Backup Name:<br>`{original_filename}_{YYYYMMDDHHMMSS}.bak`"]
+    CheckBackupDir -- Yes --> GenerateName
+    GenerateName --> CopyFile["Copy Original File to<br>`backup-files/{backup_name}`"]
+    CopyFile --> VerifyCopy{"Backup<br>Successful?"}
+    VerifyCopy -- Yes --> ProceedOp["Proceed with Original<br>Delete/Modify Operation"]
+    VerifyCopy -- No --> ErrorBackup["Log Error: Backup Failed<br>DO NOT Proceed with Operation"]
+    ErrorBackup --> NotifyUser["Notify User of Backup Failure"]
+
+    style StartBackup fill:#f9f,stroke:#333,stroke-width:2px
+    style CreateBackupDir fill:#ffcc00,stroke:#333,stroke-width:2px
+    style ErrorBackup fill:#ff0000,stroke:#333,stroke-width:2px,color:white
+    style ProceedOp fill:#ccffcc,stroke:#333,stroke-width:2px
+```
+*   **Verification**: After copying, the AI should, if possible, verify the backup's existence and integrity (e.g., file size if easily obtainable).
+*   **Failure Handling**: If backup creation fails, the original operation (delete/modify) **MUST NOT** proceed, and the user should be informed.
+
+### 2. File Access Control Rules
+
+The AI **MUST** adhere to these access control rules based on file types and locations:
+
+*   **System Configuration Files (`.cursor/*`, `*.json`, `*.yaml`, `*.toml`, `.git*` outside `devops-tools/.git_disabled`):**
+    *   **Allowed**: `read_file`, `list_dir`.
+    *   **Restricted (Requires Explicit User Confirmation for EACH operation)**: `edit_file`, `delete_file`.
+    *   **AI Action**: Before proposing `edit_file` or `delete_file` for these, explicitly state the file and the intended change, then ask "ARE YOU SURE YOU WANT TO [MODIFY/DELETE] THIS SYSTEM CONFIGURATION FILE? (YES/NO)".
+
+*   **Memory Bank Core Files (`memory-bank/*.md`, `memory-bank/creative/*.md`, `memory-bank/reflection/*.md`, `memory-bank/archive/*.md`):**
+    *   **Allowed**: `read_file`, `edit_file`, `create_file` (within defined structure), `delete_file` (e.g. clearing `tasks.md` as per workflow).
+    *   **AI Action**: Operations should align with documented Memory Bank workflows. Significant deviations require user notification.
+
+*   **User-Generated Project Files (e.g., source code, `.md` outside Memory Bank core, `devops-tools/*`):**
+    *   **Allowed**: `read_file`, `edit_file`, `create_file`, `delete_file`.
+    *   **AI Action**: Standard backup procedures apply. For deletions, consider a soft confirmation like "This will delete [filename]. Proceed?".
+
+*   **Backup Files (`backup-files/*`):**
+    *   **Allowed**: `read_file`, `list_dir`.
+    *   **Restricted**: `edit_file`, `delete_file` (should generally be avoided, manual operation by user preferred).
+    *   **AI Action**: AI should not routinely modify or delete backup files.
+
+### 3. Security Validation for Operations
+
+Before executing commands or file operations, the AI **MUST** perform these validations:
+
+*   **`backup_created_check`**: For any `edit_file` or `delete_file` operation on non-temporary files, confirm a backup was made according to the procedure above.
+*   **`user_confirmation_check`**: For `delete_file` on critical files or system configuration files, ensure explicit user "YES" has been received.
+*   **`path_validation_check`**: For `edit_file`, `create_file`, `delete_file`, ensure paths are within the project workspace and do not use `..` to escape the workspace. Relative paths are preferred.
+*   **`destructive_command_check`**: For `run_terminal_cmd` involving potentially destructive commands (e.g., `rm -rf`, `git reset --hard`), simulate the outcome if possible or request explicit user confirmation with a clear warning.
+
+These rules are critical for data safety, project integrity, and operational security. 

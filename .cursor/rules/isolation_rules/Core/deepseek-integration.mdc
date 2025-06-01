@@ -1,125 +1,110 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: false
 ---
-# DeepSeek Integration Rule
+# DEEPSEEK LLM INTEGRATION
 
-## Purpose
-Автоматическая интеграция с DeepSeek API при упоминании пользователем "дипсик", "deepseek" или запросах на использование DeepSeek модели.
+> **TL;DR:** This rule defines how to interact with DeepSeek LLMs, including model selection based on task complexity, API request formatting, and robust error handling, ensuring optimized and reliable LLM interactions.
 
-## Trigger Keywords
-- "дипсик" (любой регистр)
-- "deepseek" (любой регистр) 
-- "используй дипсик"
-- "через дипсик"
-- "с помощью дипсика"
-- "deepseek api"
+## 🧭 DEEPSEEK INTEGRATION STRATEGY
 
-## Activation Protocol
+This system provides guidelines for selecting the appropriate DeepSeek model, constructing API requests, and handling potential errors to ensure efficient and effective LLM utilization.
 
-### 1. Configuration Reading
-При обнаружении trigger keywords:
-1. **ОБЯЗАТЕЛЬНО** прочитать файл `integration_config.md`
-2. Извлечь настройки DeepSeek из активного project context:
-   - `deepseek_api_key`
-   - `deepseek_model` 
-   - `deepseek_base_url`
-
-### 2. Context Selection
-Если определено несколько project contexts:
-1. Спросить пользователя: "Какой проект контекст использовать для DeepSeek?"
-2. Предложить варианты из `integration_config.md`
-3. Сохранить выбор для текущей сессии
-
-### 3. Model Selection Logic
-Автоматически выбрать модель на основе типа задачи:
-
-**deepseek-coder** для:
-- Генерация кода
-- Отладка и исправление ошибок
-- Рефакторинг
-- Code review
-- Создание скриптов
-
-**deepseek-chat** для:
-- Общение и анализ
-- Планирование задач
-- Документация
-- Объяснения концепций
-- Переводы
-
-**deepseek-reasoner** для:
-- Сложные логические задачи
-- Архитектурные решения
-- Анализ производительности
-- Решение проблем
-- Стратегическое планирование
-
-### 4. API Configuration
-Использовать параметры из `integration_config.md`:
-```
-API_KEY: {deepseek_api_key}
-MODEL: {deepseek_model}
-BASE_URL: {deepseek_base_url}
+```mermaid
+graph TD
+    Start["Task Input / User Query"] --> AssessComplexity{"1. Assess Task Complexity<br>(Level 1-4 from activeContext.md)"}
+    AssessComplexity -- "Levels 1-2 (Simple Queries, Summaries)" --> SelectChat["2a. Select 'deepseek-chat'"]
+    AssessComplexity -- "Levels 3-4 (Complex Code, Analysis, Detailed Docs)" --> SelectCoder["2b. Select 'deepseek-coder'"]
+    SelectChat --> PrepareRequest["3. Prepare API Request<br>(Model, Messages, Parameters)"]
+    SelectCoder --> PrepareRequest
+    PrepareRequest --> CallAPI["4. Call DeepSeek API<br>(mcp_deepseek_call_api - *hypothetical tool*)"]
+    CallAPI --> HandleResponse{"5. Handle API Response"}
+    HandleResponse -- Success --> ProcessOutput["6a. Process Successful Output"]
+    HandleResponse -- Error --> HandleError["6b. Implement Error Handling<br>(Retry, Log, Notify)"]
+    ProcessOutput --> FinalOutput["7. Final Output to User/Next Step"]
+    HandleError --> FinalOutput
 ```
 
-### 5. Error Handling
-Если настройки отсутствуют или некорректны:
-1. Сообщить пользователю: "Настройки DeepSeek не найдены в integration_config.md"
-2. Предложить добавить конфигурацию
-3. Показать пример настройки
+## 🧠 MODEL SELECTION CRITERIA
 
-## Implementation Rules
+The choice of DeepSeek model is critical for performance and cost-effectiveness.
 
-### Обязательные действия:
-1. **ВСЕГДА** читать `integration_config.md` перед использованием DeepSeek
-2. **НИКОГДА** не использовать hardcoded API ключи
-3. **ВСЕГДА** выбирать подходящую модель автоматически
-4. **ОБЯЗАТЕЛЬНО** уведомлять пользователя о выбранной модели
+*   **`deepseek-chat`**:
+    *   **Use Cases**: General conversation, text summarization, simple question answering, content generation for Level 1-2 tasks, initial brainstorming.
+    *   **Strengths**: Faster response times, lower cost for simpler tasks.
+    *   **Activation**: Default for tasks determined as Level 1 or Level 2 complexity via `complexity-decision-tree.mdc`.
 
-### Формат уведомления:
+*   **`deepseek-coder`**:
+    *   **Use Cases**: Code generation, complex problem solving, detailed technical documentation, architectural analysis, Level 3-4 tasks.
+    *   **Strengths**: Advanced reasoning, strong coding capabilities, better understanding of complex contexts.
+    *   **Activation**: Default for tasks determined as Level 3 or Level 4 complexity.
+
+**Workflow for Model Selection:**
+1.  Identify task complexity based on `activeContext.md` or by applying `complexity-decision-tree.mdc`.
+2.  If complexity is Level 1 or 2, select `deepseek-chat`.
+3.  If complexity is Level 3 or 4, select `deepseek-coder`.
+4.  Provide an override mechanism if a specific model is requested by the user or deemed more appropriate by the AI based on nuanced understanding of the query.
+
+## ⚙️ API INTERACTION PROTOCOL
+
+### API Request Structure (Illustrative)
+
+*(Assuming a hypothetical `mcp_deepseek_call_api` tool)*
+```json
+{
+  "model": "deepseek-chat", // or "deepseek-coder"
+  "messages": [
+    {"role": "system", "content": "You are a helpful AI assistant integrated into a Memory Bank system. Current active context: [Context Summary from activeContext.md]. Task Level: [1-4]."},
+    {"role": "user", "content": "User's specific query or instruction."}
+  ],
+  "max_tokens": 2048,       // Adjust based on expected output
+  "temperature": 0.7,       // Lower for precision, higher for creativity
+  "stream": false           // Or true if streaming is supported and needed
+}
 ```
-🤖 Использую DeepSeek API:
-📋 Контекст: {context_name}
-🧠 Модель: {selected_model}
-🔧 Задача: {task_type}
+*   **System Prompt**: Should be dynamically populated with key information from `activeContext.md` (e.g., current project, task level, relevant file paths) to provide DeepSeek with necessary context.
+*   **User Content**: The specific request or problem statement.
+*   **Parameters**:
+    *   `max_tokens`: Carefully calculated to avoid truncation.
+    *   `temperature`: Adjusted based on the nature of the task (e.g., 0.2 for code generation, 0.7-1.0 for creative text).
+
+### Error Handling and Retry Logic
+
+Robust error handling is essential for reliable DeepSeek integration.
+
+```mermaid
+graph TD
+    APICall["API Call to DeepSeek"] --> CheckResponse{"Response Received?"}
+    CheckResponse -- No (Timeout/Network Error) --> Retry1["Retry 1 (after 2s)"]
+    CheckResponse -- Yes --> CheckStatus{"HTTP Status Code?"}
+    
+    CheckStatus -- "200 OK" --> Success["Process Response"]
+    CheckStatus -- "400 Bad Request" --> LogError400["Log: Invalid Request Payload<br>Action: Review prompt/payload structure. Do NOT retry immediately."]
+    CheckStatus -- "401 Unauthorized" --> LogError401["Log: Authentication Failed<br>Action: Verify API Key. Notify Admin. Do NOT retry."]
+    CheckStatus -- "429 Rate Limit Exceeded" --> RetryBackoff1["Log: Rate Limit Hit<br>Retry with Exponential Backoff (e.g., 5s, 15s, 30s)"]
+    CheckStatus -- "5xx Server Error" --> RetryBackoffSrv1["Log: Server Error<br>Retry with Exponential Backoff (e.g., 10s, 30s, 60s)"]
+    CheckStatus -- "Other Error" --> LogErrorOther["Log: Unexpected Error<br>Action: Document error, consider general retry if appropriate."]
+
+    Retry1 --> CheckResponse
+    RetryBackoff1 --> CheckResponse
+    RetryBackoffSrv1 --> CheckResponse
+    
+    LogError400 --> Failure["Report Failure to User/System"]
+    LogError401 --> Failure
+    LogErrorOther --> Failure
 ```
+*   **Retry Strategy**: Implement exponential backoff for transient errors (rate limits, server errors).
+*   **Logging**: Detailed logging of requests, responses, and errors.
+*   **User Notification**: Inform the user appropriately in case of persistent failures.
 
-### Безопасность:
-- Никогда не выводить API ключи в логи или сообщения
-- Использовать только настройки из `integration_config.md`
-- Проверять валидность конфигурации перед использованием
+## 💡 OPTIMIZATION AND BEST PRACTICES
 
-## Integration with Memory Bank Modes
+1.  **Contextual Prompts**: Always enrich prompts with relevant data from `activeContext.md`, `tasks.md`, and other Memory Bank files to improve response quality.
+2.  **Chunking for Large Inputs/Outputs**: For very large codebases or documents, break down the task into smaller, manageable chunks for DeepSeek to process.
+3.  **Instruction Precision**: Be explicit in prompts about the desired output format (e.g., "Provide the output as a JSON object with keys 'summary' and 'action_items'.").
+4.  **Token Management**: Monitor token usage. Design prompts to be concise while providing necessary detail. Estimate output token needs to set `max_tokens` appropriately.
+5.  **Few-Shot Prompting**: For complex or nuanced tasks, provide 1-2 examples (shots) in the prompt to guide the model's response.
+6.  **User Feedback Loop**: Where possible, incorporate a mechanism for users to rate the quality of DeepSeek's responses, which can be used to refine prompts or strategies over time.
 
-### PLAN Mode
-- Модель: `deepseek-reasoner` для сложного планирования
-- Модель: `deepseek-chat` для простого планирования
-
-### CREATIVE Mode  
-- Модель: `deepseek-chat` для дизайн решений
-- Модель: `deepseek-reasoner` для архитектурных решений
-
-### IMPLEMENT Mode
-- Модель: `deepseek-coder` для всех задач кодирования
-
-### QA Mode
-- Модель: `deepseek-coder` для тестирования кода
-- Модель: `deepseek-reasoner` для анализа качества
-
-### REFLECT/ARCHIVE Mode
-- Модель: `deepseek-chat` для документации
-- Модель: `deepseek-reasoner` для анализа результатов
-
-## Example Usage Flow
-
-1. Пользователь: "Давай сделаем это через дипсик"
-2. AI читает `integration_config.md`
-3. AI выбирает контекст (если нужно)
-4. AI определяет тип задачи и модель
-5. AI уведомляет о конфигурации
-6. AI выполняет запрос через DeepSeek API
-
-## Priority
-**HIGH** - Это правило имеет высокий приоритет при обнаружении trigger keywords.
+This integration aims to make DeepSeek a powerful and reliable tool within the Memory Bank ecosystem.
